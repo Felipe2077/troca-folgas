@@ -1,0 +1,27 @@
+# docker-compose.yml
+version: '3.8' # Especifica a versão do Docker Compose
+
+services:
+  # Define o serviço do banco de dados
+  db:
+    image: postgres:15 # Imagem oficial do PostgreSQL, versão 15 (recomendado usar uma versão específica)
+    container_name: sistema-trocas-db # Nome do container para fácil identificação
+    restart: always # Reinicia o container automaticamente se ele parar
+    environment:
+      # Variáveis de ambiente para configurar o Postgres
+      # Usamos a sintaxe ${VARIAVEL:-valor_padrao} para ler do .env ou usar um padrão
+      POSTGRES_USER: ${POSTGRES_USER:-userdev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-passdev}
+      POSTGRES_DB: ${POSTGRES_DB:-trocasdb}
+    ports:
+      # Mapeia a porta 5432 do container para a porta 5432 da sua máquina
+      # Permite que nossa API (rodando localmente) se conecte ao DB no container
+      - '5432:5432'
+    volumes:
+      # Mapeia um volume nomeado 'postgres_data' para a pasta de dados do Postgres dentro do container
+      # Isso garante que os dados do banco persistam mesmo se o container for recriado
+      - postgres_data:/var/lib/postgresql/data
+
+# Define o volume nomeado que será gerenciado pelo Docker
+volumes:
+  postgres_data:
