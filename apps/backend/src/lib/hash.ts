@@ -1,5 +1,5 @@
 // apps/backend/src/lib/hash.ts
-import bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 
 const SALT_ROUNDS = 10; // Fator de custo do hashing (padrão recomendado)
 
