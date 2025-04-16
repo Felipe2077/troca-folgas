@@ -1,0 +1,96 @@
+// prisma/schema.prisma
+
+// Define o conector e a URL do banco (lê do .env)
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Define o gerador do Prisma Client (gera o cliente tipado)
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ----- ENUMS -----
+
+enum Role {
+  ADMINISTRADOR
+  ENCARREGADO
+}
+
+enum EmployeeFunction {
+  MOTORISTA
+  COBRADOR
+}
+
+enum ReliefGroup {
+  G1
+  G2
+  FIXO_DOMINGO
+  SAB_DOMINGO
+  FIXO_SABADO
+}
+
+enum SwapEventType {
+  TROCA // Mesmo fim de semana
+  SUBSTITUICAO // Fins de semana diferentes
+}
+
+enum SwapStatus {
+  AGENDADO // Estado padrão implícito, mas podemos registrar explicitamente
+  NAO_REALIZADA // Marcado pelo ADM
+}
+
+
+// ----- MODELS -----
+
+model User {
+  id              Int      @id @default(autoincrement())
+  name            String
+  loginIdentifier String   @unique // Pode ser Email ou CPF (a definir validação)
+  passwordHash    String   // Armazenar apenas o hash da senha
+  role            Role
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  submittedRequests SwapRequest[] @relation("SubmittedBy") // Relação: 1 User -> N SwapRequests
+  auditLogs         AuditLog[]    @relation("PerformedBy") // Relação: 1 User -> N AuditLogs
+
+  @@map("users") // Nome da tabela no banco
+}
+
+model SwapRequest {
+  id               Int            @id @default(autoincrement())
+  employeeIdOut    String         // Crachá/ID do funcionário que sai
+  employeeIdIn     String         // Crachá/ID do funcionário que entra
+  swapDate         DateTime       // Data da troca (Entrada cobre Saída) @db.Date ? ou DateTime? Decidir. Vamos usar DateTime por enquanto.
+  paybackDate      DateTime       // Data do pagamento (Saída cobre Entrada)
+  employeeFunction EmployeeFunction
+  groupOut         ReliefGroup
+  groupIn          ReliefGroup
+  eventType        SwapEventType // TROCA ou SUBSTITUICAO (definido pela lógica)
+  status           SwapStatus     @default(AGENDADO)
+  observation      String?        // Observação do ADM (opcional)
+
+  submittedById Int // Chave estrangeira para User
+  submittedBy   User @relation("SubmittedBy", fields: [submittedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("swap_requests") // Nome da tabela no banco
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  timestamp DateTime @default(now())
+  action    String   // Ex: "SUBMIT_SWAP", "MARK_NOT_REALIZED", "UPDATE_SETTINGS"
+  details   Json?    // Detalhes adicionais sobre a ação (opcional)
+
+  performedById Int? // Quem realizou (pode ser nulo para ações do sistema?)
+  performedBy   User? @relation("PerformedBy", fields: [performedById], references: [id])
+
+  @@map("audit_logs") // Nome da tabela no banco
+}
+
+// Adicionar model para AdminSettings (deadline) depois, na Fase 4.
