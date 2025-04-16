@@ -20,6 +20,9 @@ export async function hashPassword(plainPassword: string): Promise<string> {
  * @param hash A hash armazenada no banco de dados.
  * @returns Uma Promise que resolve com true se a senha corresponder ao hash, false caso contrário.
  */
-export async function comparePassword(plainPassword: string, hash: string): Promise<boolean> {
+export async function comparePassword(
+  plainPassword: string,
+  hash: string
+): Promise<boolean> {
   return bcrypt.compare(plainPassword, hash);
 }
