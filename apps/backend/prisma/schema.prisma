@@ -9,6 +9,7 @@ datasource db {
 // Define o gerador do Prisma Client (gera o cliente tipado)
 generator client {
   provider = "prisma-client-js"
+  output   = "../../../node_modules/.prisma/client"
 }
 
 // ----- ENUMS -----
