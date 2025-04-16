@@ -8,7 +8,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
-    "dev": "nodemon --watch src --ext ts --exec ts-node src/server.ts",
+    "dev": "nodemon --watch src --ext ts --exec 'node --loader ts-node/esm src/server.ts'",
     "start": "node dist/server.js",
     "lint": "eslint . --ext .ts --report-unused-disable-directives --max-warnings 0",
     "db:migrate:dev": "dotenv -e ../../.env -- prisma migrate dev",
