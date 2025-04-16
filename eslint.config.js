@@ -69,15 +69,26 @@ export default tseslint.config(
       ...jsxA11y.configs.recommended.rules,
     },
   },
-
-  // Configuração Prettier (IMPORTANTE: deve ser a ÚLTIMA para sobrescrever regras de estilo)
+  
+  {
+    files: ['**/*.ts', '**/*.tsx'], // Aplica apenas a arquivos TypeScript
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error', // Mantém como erro, mas poderia ser 'warn' se preferir só um aviso
+        {
+          args: 'all', // Verifica todos os argumentos
+          argsIgnorePattern: '^_', // IGNORA argumentos que começam com _
+          vars: 'all', // Verifica todas as variáveis
+          varsIgnorePattern: '^_', // IGNORA variáveis que começam com _
+          caughtErrors: 'all', // Verifica erros capturados em try/catch
+          caughtErrorsIgnorePattern: '^_', // IGNORA erros capturados que começam com _
+          ignoreRestSiblings: true // Ignora "irmãos rest" ({ ...rest }) não usados
+        },
+      ],
+      // Você pode adicionar outras regras customizadas aqui no futuro
+    },
+  },
+  
+ // Configuração Prettier (IMPORTANTE: deve ser a ÚLTIMA para sobrescrever regras de estilo)
   prettierConfig,
-
-  // Suas regras customizadas podem vir aqui, se necessário
-  // Exemplo:
-  // {
-  //   rules: {
-  //     'no-unused-vars': 'warn', // Exemplo de regra customizada
-  //   }
-  // }
 );
