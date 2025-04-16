@@ -12,7 +12,8 @@
     "start": "node dist/server.js",
     "lint": "eslint . --ext .ts --report-unused-disable-directives --max-warnings 0",
     "db:migrate:dev": "dotenv -e ../../.env -- prisma migrate dev",
-    "db:generate": "prisma generate"
+    "db:generate": "prisma generate",
+    "db:studio": "dotenv -e ../../.env -- prisma studio"
   },
   "keywords": [],
   "author": "",
