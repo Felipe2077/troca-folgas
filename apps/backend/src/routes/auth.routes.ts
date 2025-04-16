@@ -1,7 +1,8 @@
 // apps/backend/src/routes/auth.routes.ts
 import { Role } from '@prisma/client';
-import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { authenticate } from '../hooks/authenticate.hook.js'; // Importa o hook compartilhado
 import { comparePassword, hashPassword } from '../lib/hash.js'; // Importa comparePassword
 import { prisma } from '../lib/prisma.js'; // Importa prisma
 import { loginBodySchema, registerBodySchema } from '../schemas/auth.schema.js'; // <-- NOVO IMPORT
@@ -18,17 +19,6 @@ declare module '@fastify/jwt' {
       iat: number;
       exp: number;
     };
-  }
-}
-
-// Hook de autenticação (movido para cá)
-async function authenticate(request: FastifyRequest, reply: FastifyReply) {
-  try {
-    await request.jwtVerify();
-  } catch (_err) {
-    reply.status(401).send({
-      message: 'Autenticação necessária. Token inválido ou expirado.',
-    });
   }
 }
 
