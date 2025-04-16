@@ -1,0 +1,4 @@
+# pnpm-workspace.yaml
+packages:
+  - 'apps/*' # Onde ficarão as aplicações (frontend, backend)
+  - 'packages/*' # Onde ficará código compartilhado (config, ui, types, etc.)
