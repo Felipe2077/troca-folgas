@@ -1,0 +1,10 @@
+// apps/backend/tsconfig.json
+{
+  "extends": "@tsconfig/node18/tsconfig.json", // Use a base apropriada (node16, node18, node20)
+  "compilerOptions": {
+    "outDir": "./dist", // Onde o código compilado (JS) será salvo
+    "rootDir": "./src" // Onde está o código fonte (TS)
+  },
+  "include": ["src/**/*"], // Quais arquivos incluir na compilação
+  "exclude": ["node_modules", "dist"] // O que excluir
+}
