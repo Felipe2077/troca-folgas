@@ -2,8 +2,9 @@
 import { Role } from '@prisma/client';
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { comparePassword } from '../lib/hash.js'; // Importa comparePassword
+import { comparePassword, hashPassword } from '../lib/hash.js'; // Importa comparePassword
 import { prisma } from '../lib/prisma.js'; // Importa prisma
+import { loginBodySchema, registerBodySchema } from '../schemas/auth.schema.js'; // <-- NOVO IMPORT
 
 declare module '@fastify/jwt' {
   // Interface para estender/definir tipos dentro do @fastify/jwt
@@ -19,12 +20,6 @@ declare module '@fastify/jwt' {
     };
   }
 }
-
-// Schema Zod para validar o corpo da requisição de login (pode ficar aqui ou em um arquivo de schemas)
-const loginBodySchema = z.object({
-  loginIdentifier: z.string(),
-  password: z.string().min(6, 'Senha precisa ter no mínimo 6 caracteres'),
-});
 
 // Hook de autenticação (movido para cá)
 async function authenticate(request: FastifyRequest, reply: FastifyReply) {
@@ -100,6 +95,56 @@ export async function authRoutes(fastify: FastifyInstance) {
     }
 
     return reply.status(200).send({ user: userProfile });
+  });
+
+  // Rota para registrar um novo usuário
+  fastify.post('/register', async (request, reply) => {
+    try {
+      // 1. Validar o corpo da requisição
+      const body = registerBodySchema.parse(request.body);
+
+      // 2. Verificar se já existe usuário com este loginIdentifier
+      const existingUser = await prisma.user.findUnique({
+        where: { loginIdentifier: body.loginIdentifier },
+      });
+
+      if (existingUser) {
+        // Retorna erro 409 Conflict se o identificador já estiver em uso
+        return reply
+          .status(409)
+          .send({ message: 'Identificador de login já está em uso.' });
+      }
+
+      // 3. Hashear a senha antes de salvar
+      const passwordHash = await hashPassword(body.password);
+
+      // 4. Criar o usuário no banco de dados
+      const newUser = await prisma.user.create({
+        data: {
+          name: body.name,
+          loginIdentifier: body.loginIdentifier,
+          passwordHash: passwordHash, // Salva o HASH, não a senha original!
+          role: body.role,
+        },
+      });
+
+      // 5. Retornar resposta de sucesso (201 Created)
+      // NUNCA retorne a hash da senha
+      const { passwordHash: _, ...userWithoutPassword } = newUser; // Remove o hash da resposta
+
+      return reply.status(201).send({ user: userWithoutPassword });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return reply
+          .status(400)
+          .send({ message: 'Erro de validação.', issues: error.format() });
+      }
+      fastify.log.error(error);
+      // Poderia tratar erros específicos do Prisma aqui (ex: falha de conexão)
+      return reply
+        .status(500)
+        .send({ message: 'Erro interno do servidor ao criar usuário.' });
+    }
   });
 
   // Adicione aqui outras rotas relacionadas à autenticação no futuro (ex: /register, /refresh_token)
