@@ -9,6 +9,7 @@
     "build": "tsc",
     "dev": "nodemon --watch src --ext ts --exec ts-node src/server.ts",
     "start": "node dist/server.js",
+    "lint": "eslint . --ext .ts --report-unused-disable-directives --max-warnings 0",
     "db:migrate:dev": "dotenv -e ../../.env -- prisma migrate dev",
     "db:generate": "prisma generate"
   },
