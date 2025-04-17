@@ -5,6 +5,7 @@ import './globals.css';
 // Importe os componentes (ajuste o caminho se não usar alias '@/')
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
+import { ThemeProvider } from '@/components/theme-provider'; // Importa o provider
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -19,14 +20,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className="h-full">
+    <html lang="pt-BR" className="h-full" suppressHydrationWarning>
       <body
-        className={`${inter.className} flex flex-col min-h-full bg-gray-50`}
+        className={`${inter.className} flex flex-col min-h-full bg-background text-foreground`}
       >
-        <Header /> {/* Renderiza o Cabeçalho */}
-        {/* Área principal que ocupa o espaço restante */}
-        <main className="flex-grow container mx-auto p-4 py-6">{children}</main>
-        <Footer />
+        <ThemeProvider>
+          <Header />
+          <main className="flex-grow container mx-auto p-4 py-6">
+            {children}
+          </main>
+          <Footer />
+        </ThemeProvider>
       </body>
     </html>
   );
