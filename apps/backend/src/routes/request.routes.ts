@@ -24,6 +24,49 @@ function areDatesInSameISOWeek(date1: Date, date2: Date): boolean {
 }
 
 export async function requestRoutes(fastify: FastifyInstance) {
+  fastify.get(
+    '/', // Usará o prefixo '/api/requests' definido em server.ts
+    {
+      onRequest: [authenticate], // Aplica o hook de autenticação JWT primeiro
+    },
+    async (request, reply) => {
+      try {
+        // 1. Verificar Role do Usuário (ADMINISTRADOR) - Vem do payload do JWT
+        if (request.user.role !== Role.ADMINISTRADOR) {
+          return reply
+            .status(403)
+            .send({
+              message:
+                'Acesso negado. Apenas administradores podem listar todas as solicitações.',
+            });
+        }
+
+        // 2. Buscar todas as solicitações no banco de dados
+        const requests = await prisma.swapRequest.findMany({
+          // Opcional: Ordenar as mais recentes primeiro
+          orderBy: {
+            createdAt: 'desc',
+          },
+          // Opcional: Incluir dados do usuário que submeteu
+          // include: {
+          //   submittedBy: {
+          //     select: { id: true, name: true }
+          //   }
+          // }
+        });
+
+        // 3. Retornar a lista de solicitações
+        return reply.status(200).send({ requests });
+      } catch (error) {
+        fastify.log.error(error); // Loga o erro no console do servidor
+        return reply
+          .status(500)
+          .send({
+            message: 'Erro interno do servidor ao buscar solicitações.',
+          });
+      }
+    }
+  );
   fastify.post(
     '/', // Rota POST na raiz do prefixo que definiremos em server.ts (ex: /api/requests)
     {
