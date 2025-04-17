@@ -29,14 +29,16 @@ interface ApiError {
 }
 
 async function loginUser(credentials: LoginData): Promise<LoginResponse> {
-  const response = await fetch('/api/auth/login', {
-    // URL relativa funciona no cliente
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(credentials),
-  });
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(credentials),
+    }
+  );
 
   // Se a resposta não for OK (ex: 400, 401, 500), lança um erro
   if (!response.ok) {
