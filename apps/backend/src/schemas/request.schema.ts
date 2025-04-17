@@ -8,11 +8,14 @@ export const swapRequestCreateBodySchema = z.object({
   employeeIdOut: z
     .string({ required_error: 'ID do Funcionário de Saída é obrigatório.' })
     .trim()
-    .min(1, 'ID do Funcionário de Saída não pode ser vazio.'),
+    .min(1, 'ID do Funcionário de Saída não pode ser vazio.')
+    .regex(/^[0-9]+$/, 'Crachá de Saída deve conter apenas números.'),
+
   employeeIdIn: z
     .string({ required_error: 'ID do Funcionário de Entrada é obrigatório.' })
     .trim()
-    .min(1, 'ID do Funcionário de Entrada não pode ser vazio.'),
+    .min(1, 'ID do Funcionário de Entrada não pode ser vazio.')
+    .regex(/^[0-9]+$/, 'Crachá de Entrada deve conter apenas números.'),
 
   // Usamos coerce.date para tentar converter string (do JSON) para Date
   swapDate: z.coerce.date({

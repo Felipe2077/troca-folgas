@@ -105,10 +105,17 @@ export default function NewRequestPage() {
                 </Label>
                 <Input
                   id="employeeIdOut"
-                  placeholder="Crachá de quem vai folgar"
+                  placeholder="Apenas números"
                   required
                   value={employeeIdOut}
-                  onChange={(e) => setEmployeeIdOut(e.target.value)}
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const numericValue = value.replace(/[^0-9]/g, '');
+                    setEmployeeIdOut(numericValue); // Atualiza estado SÓ com números
+                  }}
                 />
               </div>
               <div className="grid gap-2">
@@ -147,10 +154,18 @@ export default function NewRequestPage() {
                 </Label>
                 <Input
                   id="employeeIdIn"
-                  placeholder="Crachá de quem vai cobrir"
+                  placeholder="Apenas números" // Atualiza placeholder
                   required
                   value={employeeIdIn}
-                  onChange={(e) => setEmployeeIdIn(e.target.value)}
+                  type="tel" // Sugere teclado numérico em mobile, sem spinners
+                  inputMode="numeric" // Hint adicional para teclado numérico
+                  pattern="[0-9]*" // Validação HTML básica (opcional)
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Remove qualquer caractere que não seja dígito
+                    const numericValue = value.replace(/[^0-9]/g, '');
+                    setEmployeeIdIn(numericValue); // Atualiza estado SÓ com números
+                  }}
                 />
               </div>
               <div className="grid gap-2">
