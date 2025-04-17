@@ -25,7 +25,7 @@ interface LoginResponse {
 interface ApiError {
   // Tipo simples para erros da API
   message: string;
-  issues?: any; // Para erros Zod
+  issues?: unknown; // Para erros Zod
 }
 
 async function loginUser(credentials: LoginData): Promise<LoginResponse> {
