@@ -1,4 +1,5 @@
 // apps/backend/src/server.ts
+import cors from '@fastify/cors';
 import fastifyEnv from '@fastify/env'; // Import @fastify/env
 import jwt from '@fastify/jwt'; // Import @fastify/jwt
 import fastify from 'fastify';
@@ -29,6 +30,30 @@ await app.register(jwt, {
   sign: {
     expiresIn: '7d', // Define expiração do token (ex: 7 dias)
   },
+});
+
+// Registrar @fastify/cors
+await app.register(cors, {
+  origin: (origin, cb) => {
+    console.log(`[CORS] Received Origin: ${origin}`);
+    // Permite localhost:3000, o IP específico da sua rede local na porta 3000, ou nenhuma origem (requests do mesmo servidor, curl, etc)
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://10.10.112.205:3000', // <-- Adiciona o IP que vimos no log
+    ];
+
+    // Verifica se a origem recebida está na lista ou se não há origem
+    if (!origin || allowedOrigins.includes(origin)) {
+      console.log('[CORS] Origin Allowed: true');
+      cb(null, true); // Permite
+      return;
+    }
+
+    console.log('[CORS] Origin Allowed: false');
+    cb(new Error('Not allowed by CORS'), false); // Nega
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 });
 
 // --------------- ROTAS ---------
