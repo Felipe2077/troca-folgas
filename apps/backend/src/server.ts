@@ -5,6 +5,7 @@ import fastify from 'fastify';
 import { z } from 'zod';
 import { envSchemaJson, zodEnvSchema } from './config/env.validation.js'; // <-- NOVO IMPORT
 import { authRoutes } from './routes/auth.routes.js';
+import { requestRoutes } from './routes/request.routes.js';
 
 // Declare tipos para as variáveis de ambiente validadas
 declare module 'fastify' {
@@ -31,12 +32,8 @@ await app.register(jwt, {
 });
 
 // --------------- ROTAS ---------
-await app.register(authRoutes, { prefix: '/api/auth' }); // Exemplo de prefixo
-
-// Rota de exemplo simples (pode manter ou remover)
-app.get('/', async (_request, _reply) => {
-  return { hello: 'world from Fastify!' };
-});
+await app.register(authRoutes, { prefix: '/api/auth' });
+await app.register(requestRoutes, { prefix: '/api/requests' });
 
 // ----- INICIALIZAÇÃO DO SERVIDOR -----
 const start = async () => {
