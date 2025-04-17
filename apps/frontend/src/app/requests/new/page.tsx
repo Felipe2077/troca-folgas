@@ -47,9 +47,9 @@ export default function NewRequestPage() {
   const [paybackDate, setPaybackDate] = useState<Date | undefined>(undefined);
   const [employeeFunction, setEmployeeFunction] = useState<string | undefined>(
     undefined
-  ); // <- Tipo string
-  const [groupOut, setGroupOut] = useState<string | undefined>(undefined); // <- Tipo string
-  const [groupIn, setGroupIn] = useState<string | undefined>(undefined); // <- Tipo string
+  );
+  const [groupOut, setGroupOut] = useState<string | undefined>(undefined);
+  const [groupIn, setGroupIn] = useState<string | undefined>(undefined);
 
   const router = useRouter(); // Para navegação futura
 
