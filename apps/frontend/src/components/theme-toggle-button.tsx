@@ -1,36 +1,47 @@
 // apps/frontend/src/components/theme-toggle-button.tsx
 'use client';
 
-import { Moon, Sun } from 'lucide-react'; // Ícones (Shadcn/ui geralmente instala lucide-react)
+// Importe useState e useEffect de 'react'
+import { Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
-
-// Supondo que você terá um componente Button do Shadcn/ui depois
-// Por enquanto, vamos usar um botão HTML simples estilizado com Tailwind
-// import { Button } from "@/components/ui/button"; // Importaria assim depois
+import { useEffect, useState } from 'react';
 
 export function ThemeToggleButton() {
   const { setTheme, theme } = useTheme();
+  // Estado para saber se o componente já montou no cliente
+  const [mounted, setMounted] = useState(false);
 
+  // Efeito que roda APENAS no cliente, após a montagem inicial
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Se ainda não montou, não renderiza nada ou um placeholder
+  // para evitar a diferença entre servidor e cliente inicial
+  if (!mounted) {
+    // Pode retornar null ou um placeholder de mesmo tamanho para evitar layout shift
+    return <div className="h-9 w-9 p-2" aria-hidden="true"></div>; // Placeholder com tamanho similar ao botão
+    // return null; // Alternativa mais simples se o layout shift não for problema
+  }
+
+  // Função de toggle (igual a antes)
   const toggleTheme = () => {
-    setTheme(theme === 'light' ? 'dark' : 'light');
+    setTheme(theme === 'light' || theme === 'system' ? 'dark' : 'light'); // Ajuste para considerar 'system'
   };
 
+  // Renderiza o botão COM o ícone correto APÓS montar no cliente
   return (
     <button
       onClick={toggleTheme}
-      className="p-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500"
+      className="p-2 rounded-md hover:bg-gray-200 focus:outline-none  dark:hover:bg-gray-800" // Adicionei estilo dark de exemplo
       aria-label="Alterar tema"
     >
-      {theme === 'light' ? (
-        <Moon className="h-5 w-5" /> // Ícone de lua para tema escuro
+      {/* Lógica de ícone pode ser simplificada se 'system' levar a 'light' ou 'dark' */}
+      {theme === 'dark' ? (
+        <Sun className="h-5 w-5" /> // Mostra Sol no tema escuro
       ) : (
-        <Sun className="h-5 w-5" /> // Ícone de sol para tema claro
+        <Moon className="h-5 w-5" /> // Mostra Lua no tema claro (ou system)
       )}
     </button>
-    // <Button variant="ghost" size="icon" onClick={toggleTheme}>
-    //   <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-    //   <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-    //   <span className="sr-only">Alterar tema</span>
-    // </Button> // <-- Exemplo de como seria com o Button do Shadcn/ui
   );
 }
