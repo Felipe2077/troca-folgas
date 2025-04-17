@@ -1,6 +1,6 @@
 // apps/backend/src/routes/request.routes.ts
 import { Role, SwapEventType, SwapStatus } from '@prisma/client';
-import { getISOWeek, isSaturday, isSunday } from 'date-fns'; // Helpers de data
+import { getISOWeek } from 'date-fns'; // Helpers de data
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { authenticate } from '../hooks/authenticate.hook.js'; // Nosso hook de auth
@@ -9,7 +9,8 @@ import { swapRequestCreateBodySchema } from '../schemas/request.schema.js'; // N
 
 // Helper para verificar se é Sábado ou Domingo
 function isWeekend(date: Date): boolean {
-  return isSaturday(date) || isSunday(date);
+  const dayUTC = date.getUTCDay(); // 0 = Domingo, 1 = Seg, ..., 6 = Sábado
+  return dayUTC === 0 || dayUTC === 6; // Retorna true se for Domingo (0) ou Sábado (6)
 }
 
 // Helper para verificar se duas datas estão na mesma semana ISO (bom para comparar fim de semana)
