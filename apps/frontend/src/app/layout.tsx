@@ -1,11 +1,10 @@
 // apps/frontend/src/app/layout.tsx
+import { Footer } from '@/components/Footer';
+import { Header } from '@/components/Header';
+import { Providers } from '@/components/providers';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-// Importe os componentes (ajuste o caminho se não usar alias '@/')
-import { Footer } from '@/components/Footer';
-import { Header } from '@/components/Header';
-import { ThemeProvider } from '@/components/theme-provider'; // Importa o provider
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -24,13 +23,13 @@ export default function RootLayout({
       <body
         className={`${inter.className} flex flex-col min-h-full bg-background text-foreground`}
       >
-        <ThemeProvider>
+        <Providers>
           <Header />
           <main className="flex-grow container mx-auto p-4 py-6">
             {children}
           </main>
           <Footer />
-        </ThemeProvider>
+        </Providers>
       </body>
     </html>
   );
