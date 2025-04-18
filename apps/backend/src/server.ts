@@ -39,7 +39,8 @@ await app.register(cors, {
     // Permite localhost:3000, o IP específico da sua rede local na porta 3000, ou nenhuma origem (requests do mesmo servidor, curl, etc)
     const allowedOrigins = [
       'http://localhost:3000',
-      'http://10.10.112.205:3000', // <-- Adiciona o IP que vimos no log
+      'http://10.10.112.205:3000', // pioneira,
+      'http://192.168.2.115:3000', // casa,
     ];
 
     // Verifica se a origem recebida está na lista ou se não há origem

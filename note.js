@@ -16,3 +16,23 @@ role: "ENCARREGADO",
   role: "ADMINISTRADOR",
   token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiQURNSU5JU1RSQURPUiIsInN1YiI6IjIiLCJpYXQiOjE3NDQ4ODgwMzMsImV4cCI6MTc0NTQ5MjgzM30.gGH8aCdxPzcW8H3O6BGonEsLztLNUaedGClY9Axu3-Y"
 }
+
+// ************home
+
+
+{
+  name: "Felipe Encarregado",
+  loginIdentifier: "felipe.enc@email.com",
+  password: "password123",
+  role: "ENCARREGADO"
+}
+  
+  
+  
+  {
+    name: "Usuario Admin Teste",
+    loginIdentifier: "admin@teste.com",
+    password: "password123",
+    role: "ADMINISTRADOR",
+    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiQURNSU5JU1RSQURPUiIsInN1YiI6IjIiLCJpYXQiOjE3NDQ4ODgwMzMsImV4cCI6MTc0NTQ5MjgzM30.gGH8aCdxPzcW8H3O6BGonEsLztLNUaedGClY9Axu3-Y"
+  }

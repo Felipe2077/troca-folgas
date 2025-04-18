@@ -1,14 +1,18 @@
 // apps/frontend/src/app/requests/new/page.tsx
-'use client'; // Marca como Client Component pois usará estado e handlers
+'use client';
 
-import * as React from 'react'; // Importa React e hooks
+import { cn } from '@/lib/utils';
+import { useMutation } from '@tanstack/react-query'; // Importar useMutation
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import * as React from 'react';
 import { useState } from 'react';
-// import Link from "next/link"; // Descomente se/quando adicionar links
-import { useRouter } from 'next/navigation'; // Para redirecionamento futuro
-// import { z } from 'zod'; // Não estamos usando Zod diretamente aqui por enquanto
 
 // Importa componentes Shadcn/ui
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import {
   Card,
   CardContent,
@@ -17,9 +21,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { DatePicker } from '@/components/ui/datepicker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -28,7 +36,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-// --- Constantes para as opções dos Selects (Substituindo Enums do Prisma) ---
+// Tipos (Enum podem ser substituídos por string se não vierem de pacote compartilhado)
 const employeeFunctionOptions = ['MOTORISTA', 'COBRADOR'] as const;
 const reliefGroupOptions = [
   'G1',
@@ -37,55 +45,190 @@ const reliefGroupOptions = [
   'SAB_DOMINGO',
   'FIXO_SABADO',
 ] as const;
+type EmployeeFunction = (typeof employeeFunctionOptions)[number];
+type ReliefGroup = (typeof reliefGroupOptions)[number];
+
+// Tipos para a mutação
+interface SwapRequestInput {
+  employeeIdOut: string;
+  employeeIdIn: string;
+  swapDate: Date; // Zod coerce.date garante que seja Date aqui
+  paybackDate: Date;
+  employeeFunction: EmployeeFunction;
+  groupOut: ReliefGroup;
+  groupIn: ReliefGroup;
+}
+
+interface SubmitSwapRequestParams {
+  formData: SwapRequestInput;
+  token: string;
+}
+
+// Simula a estrutura da resposta da API (ajuste se necessário)
+interface SwapRequestResponse {
+  request: {
+    id: number;
+    // ... outros campos se a API retornar ...
+  };
+}
+
+interface ApiError {
+  message: string;
+  issues?: unknown;
+}
+
+// --- Componente DatePicker (inalterado) ---
+interface DatePickerProps {
+  date: Date | undefined;
+  setDate: (date: Date | undefined) => void;
+}
+function DatePicker({ date, setDate }: DatePickerProps) {
+  /* ... código do DatePicker ... */
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant={'outline'}
+          className={cn(
+            'w-full justify-start text-left font-normal',
+            !date && 'text-muted-foreground'
+          )}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />{' '}
+          {date ? (
+            format(date, 'PPP', { locale: ptBR })
+          ) : (
+            <span>Escolha uma data</span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={setDate}
+          initialFocus
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+// --- Fim do Componente DatePicker ---
 
 // --- Componente Principal da Página ---
 export default function NewRequestPage() {
-  // Estados para todos os campos do formulário
+  // Estados do formulário
   const [employeeIdOut, setEmployeeIdOut] = useState('');
   const [employeeIdIn, setEmployeeIdIn] = useState('');
   const [swapDate, setSwapDate] = useState<Date | undefined>(undefined);
   const [paybackDate, setPaybackDate] = useState<Date | undefined>(undefined);
-  const [employeeFunction, setEmployeeFunction] = useState<string | undefined>(
-    undefined
-  );
-  const [groupOut, setGroupOut] = useState<string | undefined>(undefined);
-  const [groupIn, setGroupIn] = useState<string | undefined>(undefined);
+  const [employeeFunction, setEmployeeFunction] = useState<
+    EmployeeFunction | undefined
+  >(undefined);
+  const [groupOut, setGroupOut] = useState<ReliefGroup | undefined>(undefined);
+  const [groupIn, setGroupIn] = useState<ReliefGroup | undefined>(undefined);
+  const [apiError, setApiError] = useState<string | null>(null); // Estado para erro da API
 
-  const router = useRouter(); // Para navegação futura
+  const router = useRouter();
 
-  // Calcula se o botão de submit deve estar desabilitado
+  // Função que faz a chamada à API
+  const submitSwapRequest = async ({
+    formData,
+    token,
+  }: SubmitSwapRequestParams): Promise<SwapRequestResponse> => {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/requests`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`, // <-- Inclui o token!
+        },
+        body: JSON.stringify(formData),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData: ApiError = await response.json().catch(() => ({
+        message: `Erro ${response.status}: ${response.statusText}`,
+      }));
+      // Lança um erro que será pego pelo onError do useMutation
+      throw new Error(errorData.message || 'Falha ao criar solicitação.');
+    }
+    return response.json();
+  };
+
+  // Configuração da Mutação com React Query
+  const mutation = useMutation<
+    SwapRequestResponse,
+    Error,
+    SubmitSwapRequestParams
+  >({
+    mutationFn: submitSwapRequest,
+    onSuccess: (data) => {
+      console.log('Solicitação criada com sucesso:', data);
+      setApiError(null); // Limpa erros anteriores
+      alert('Solicitação de troca/substituição enviada com sucesso!');
+      // Limpar formulário?
+      setEmployeeIdOut('');
+      setEmployeeIdIn('');
+      setSwapDate(undefined); /* ...etc */
+      // Redirecionar para outra página?
+      router.push('/'); // Volta para home por enquanto
+    },
+    onError: (error) => {
+      console.error('Erro ao criar solicitação:', error);
+      setApiError(error.message); // Guarda a mensagem de erro para exibir na UI
+      // alert(`Erro ao criar solicitação: ${error.message}`); // Remove alert se usar estado
+    },
+  });
+
+  // Calcula estado desabilitado (inclui pending da mutação)
   const isDisabled =
     !employeeIdOut.trim() ||
     !employeeIdIn.trim() ||
     !swapDate ||
     !paybackDate ||
-    !employeeFunction || // Verifica se a string não é vazia/undefined
-    !groupOut || // Verifica se a string não é vazia/undefined
-    !groupIn; // Verifica se a string não é vazia/undefined
+    !employeeFunction ||
+    !groupOut ||
+    !groupIn ||
+    mutation.isPending;
 
-  // Handler para o submit do formulário (por enquanto só loga)
+  // Handler de submit
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault(); // Impede refresh padrão
-    if (isDisabled) return; // Não faz nada se desabilitado
+    event.preventDefault();
+    if (isDisabled) return;
 
-    const formData = {
+    // 1. Pega o token do localStorage
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      // Idealmente, ter um hook/context que já faria isso ou redirecionaria
+      alert(
+        'Erro: Token de autenticação não encontrado. Faça login novamente.'
+      );
+      router.push('/login'); // Exemplo: Redireciona para login
+      return;
+    }
+
+    // 2. Prepara os dados (garante que não tem undefined)
+    //    A validação do isDisabled já garante que não são undefined aqui
+    const formData: SwapRequestInput = {
       employeeIdOut,
       employeeIdIn,
-      swapDate,
-      paybackDate,
-      employeeFunction,
-      groupOut,
-      groupIn,
+      swapDate: swapDate!,
+      paybackDate: paybackDate!,
+      employeeFunction: employeeFunction!,
+      groupOut: groupOut!,
+      groupIn: groupIn!,
     };
-    console.log('Dados do formulário para enviar:', formData);
-    alert('Dados prontos no console! Próximo passo: Enviar para API.');
-    // TODO: Chamar a API com useMutation (Tarefa 3.7)
+
+    // 3. Limpa erro anterior e chama a mutação
+    setApiError(null);
+    mutation.mutate({ formData, token });
   };
 
   return (
     <div className="flex justify-center pt-10">
-      {' '}
-      {/* Removido items-center para não forçar centralização vertical excessiva */}
       <Card className="w-full max-w-2xl">
         <CardHeader>
           <CardTitle>Nova Solicitação de Troca/Substituição</CardTitle>
@@ -94,11 +237,18 @@ export default function NewRequestPage() {
             folga.
           </CardDescription>
         </CardHeader>
-        {/* Formulário envolvendo o conteúdo e o rodapé */}
         <form onSubmit={handleSubmit}>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Mensagem de erro da API */}
+            {apiError && (
+              <p className="md:col-span-2 text-sm font-medium text-destructive bg-destructive/10 p-3 rounded-md">
+                Erro: {apiError}
+              </p>
+            )}
+
             {/* Coluna 1 */}
             <div className="space-y-4">
+              {/* ... Input employeeIdOut (com value/onChange e disabled={mutation.isPending}) ... */}
               <div className="grid gap-2">
                 <Label htmlFor="employeeIdOut">
                   Funcionário de Saída (Crachá)
@@ -112,30 +262,32 @@ export default function NewRequestPage() {
                   inputMode="numeric"
                   pattern="[0-9]*"
                   onChange={(e) => {
-                    const value = e.target.value;
-                    const numericValue = value.replace(/[^0-9]/g, '');
-                    setEmployeeIdOut(numericValue); // Atualiza estado SÓ com números
+                    const v = e.target.value;
+                    setEmployeeIdOut(v.replace(/[^0-9]/g, ''));
                   }}
+                  disabled={mutation.isPending}
                 />
               </div>
+              {/* ... DatePicker swapDate (com date/setDate e talvez disabled?) ... */}
               <div className="grid gap-2">
                 <Label htmlFor="swapDate">
                   Data da Troca (Trabalho do Colega)
                 </Label>
                 <DatePicker date={swapDate} setDate={setSwapDate} />
               </div>
+              {/* ... Select groupOut (com value/onValueChange e disabled={mutation.isPending}) ... */}
               <div className="grid gap-2">
                 <Label htmlFor="groupOut">Grupo de Folga (Saída)</Label>
                 <Select
                   value={groupOut}
-                  onValueChange={(value: string) => setGroupOut(value)} // Recebe string
+                  onValueChange={(value: ReliefGroup) => setGroupOut(value)}
                   required
+                  disabled={mutation.isPending}
                 >
                   <SelectTrigger id="groupOut">
                     <SelectValue placeholder="Selecione o grupo de quem vai folgar" />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* Itera sobre a constante reliefGroupOptions */}
                     {reliefGroupOptions.map((group) => (
                       <SelectItem key={group} value={group}>
                         {group}
@@ -148,44 +300,46 @@ export default function NewRequestPage() {
 
             {/* Coluna 2 */}
             <div className="space-y-4">
+              {/* ... Input employeeIdIn (com value/onChange e disabled={mutation.isPending}) ... */}
               <div className="grid gap-2">
                 <Label htmlFor="employeeIdIn">
                   Funcionário de Entrada (Crachá)
                 </Label>
                 <Input
                   id="employeeIdIn"
-                  placeholder="Apenas números" // Atualiza placeholder
+                  placeholder="Apenas números"
                   required
                   value={employeeIdIn}
-                  type="tel" // Sugere teclado numérico em mobile, sem spinners
-                  inputMode="numeric" // Hint adicional para teclado numérico
-                  pattern="[0-9]*" // Validação HTML básica (opcional)
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   onChange={(e) => {
-                    const value = e.target.value;
-                    // Remove qualquer caractere que não seja dígito
-                    const numericValue = value.replace(/[^0-9]/g, '');
-                    setEmployeeIdIn(numericValue); // Atualiza estado SÓ com números
+                    const v = e.target.value;
+                    setEmployeeIdIn(v.replace(/[^0-9]/g, ''));
                   }}
+                  disabled={mutation.isPending}
                 />
               </div>
+              {/* ... DatePicker paybackDate (com date/setDate e talvez disabled?) ... */}
               <div className="grid gap-2">
                 <Label htmlFor="paybackDate">
                   Data do Pagamento (Retorno da Folga)
                 </Label>
                 <DatePicker date={paybackDate} setDate={setPaybackDate} />
               </div>
+              {/* ... Select groupIn (com value/onValueChange e disabled={mutation.isPending}) ... */}
               <div className="grid gap-2">
                 <Label htmlFor="groupIn">Grupo de Folga (Entrada)</Label>
                 <Select
                   value={groupIn}
-                  onValueChange={(value: string) => setGroupIn(value)} // Recebe string
+                  onValueChange={(value: ReliefGroup) => setGroupIn(value)}
                   required
+                  disabled={mutation.isPending}
                 >
                   <SelectTrigger id="groupIn">
                     <SelectValue placeholder="Selecione o grupo de quem vai cobrir" />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* Itera sobre a constante reliefGroupOptions */}
                     {reliefGroupOptions.map((group) => (
                       <SelectItem key={group} value={group}>
                         {group}
@@ -198,19 +352,20 @@ export default function NewRequestPage() {
 
             {/* Campo Função */}
             <div className="grid gap-2 md:col-span-2">
-              {' '}
-              {/* Ocupa as duas colunas */}
               <Label htmlFor="employeeFunction">Função</Label>
+              {/* ... Select employeeFunction (com value/onValueChange e disabled={mutation.isPending}) ... */}
               <Select
                 value={employeeFunction}
-                onValueChange={(value: string) => setEmployeeFunction(value)} // Recebe string
+                onValueChange={(value: EmployeeFunction) =>
+                  setEmployeeFunction(value)
+                }
                 required
+                disabled={mutation.isPending}
               >
                 <SelectTrigger id="employeeFunction">
                   <SelectValue placeholder="Selecione a função" />
                 </SelectTrigger>
                 <SelectContent>
-                  {/* Itera sobre a constante employeeFunctionOptions */}
                   {employeeFunctionOptions.map((func) => (
                     <SelectItem key={func} value={func}>
                       {func}
@@ -222,7 +377,8 @@ export default function NewRequestPage() {
           </CardContent>
           <CardFooter>
             <Button className="w-full" type="submit" disabled={isDisabled}>
-              Enviar Solicitação
+              {/* Mostra feedback de loading no botão */}
+              {mutation.isPending ? 'Enviando...' : 'Enviar Solicitação'}
             </Button>
           </CardFooter>
         </form>
