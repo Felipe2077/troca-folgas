@@ -1,11 +1,16 @@
 // apps/backend/src/routes/request.routes.ts
 import { Role, SwapEventType, SwapStatus } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { getISOWeek } from 'date-fns'; // Helpers de data
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
+import { z, ZodError } from 'zod';
 import { authenticate } from '../hooks/authenticate.hook.js'; // Nosso hook de auth
 import { prisma } from '../lib/prisma.js';
-import { swapRequestCreateBodySchema } from '../schemas/request.schema.js'; // Nosso schema Zod
+import {
+  requestIdParamsSchema,
+  requestUpdateObservationBodySchema,
+  swapRequestCreateBodySchema,
+} from '../schemas/request.schema.js'; // Nosso schema Zod
 
 // Helper para verificar se é Sábado ou Domingo
 function isWeekend(date: Date): boolean {
@@ -33,12 +38,10 @@ export async function requestRoutes(fastify: FastifyInstance) {
       try {
         // 1. Verificar Role do Usuário (ADMINISTRADOR) - Vem do payload do JWT
         if (request.user.role !== Role.ADMINISTRADOR) {
-          return reply
-            .status(403)
-            .send({
-              message:
-                'Acesso negado. Apenas administradores podem listar todas as solicitações.',
-            });
+          return reply.status(403).send({
+            message:
+              'Acesso negado. Apenas administradores podem listar todas as solicitações.',
+          });
         }
 
         // 2. Buscar todas as solicitações no banco de dados
@@ -59,11 +62,9 @@ export async function requestRoutes(fastify: FastifyInstance) {
         return reply.status(200).send({ requests });
       } catch (error) {
         fastify.log.error(error); // Loga o erro no console do servidor
-        return reply
-          .status(500)
-          .send({
-            message: 'Erro interno do servidor ao buscar solicitações.',
-          });
+        return reply.status(500).send({
+          message: 'Erro interno do servidor ao buscar solicitações.',
+        });
       }
     }
   );
@@ -143,6 +144,80 @@ export async function requestRoutes(fastify: FastifyInstance) {
         return reply
           .status(500)
           .send({ message: 'Erro interno do servidor ao criar solicitação.' });
+      }
+    }
+  );
+  // --- Rota PATCH para atualizar a observação (ADMIN) ---
+  fastify.patch(
+    '/:id', // Captura o ID da URL
+    {
+      onRequest: [authenticate], // Precisa estar autenticado
+    },
+    async (request, reply) => {
+      try {
+        // 1. Verificar Role (Só Admin pode atualizar)
+        if (request.user.role !== Role.ADMINISTRADOR) {
+          return reply.status(403).send({
+            message:
+              'Acesso negado. Apenas administradores podem atualizar solicitações.',
+          });
+        }
+
+        // 2. Validar Parâmetro da Rota (ID)
+        const paramsParse = requestIdParamsSchema.safeParse(request.params);
+        if (!paramsParse.success) {
+          return reply.status(400).send({
+            message: 'ID inválido na URL.',
+            issues: paramsParse.error.format(),
+          });
+        }
+        const { id } = paramsParse.data;
+
+        // 3. Validar Corpo da Requisição (Observação)
+        const bodyParse = requestUpdateObservationBodySchema.safeParse(
+          request.body
+        );
+        if (!bodyParse.success) {
+          return reply.status(400).send({
+            message: 'Dados inválidos no corpo da requisição.',
+            issues: bodyParse.error.format(),
+          });
+        }
+        const { observation } = bodyParse.data;
+
+        // 4. Atualizar no Banco de Dados
+        const updatedRequest = await prisma.swapRequest.update({
+          where: { id: id },
+          data: {
+            observation: observation, // Atualiza APENAS a observação
+            // updatedAt será atualizado automaticamente pelo Prisma
+          },
+        });
+
+        // 5. Retornar sucesso com a solicitação atualizada
+        return reply.status(200).send({ request: updatedRequest });
+      } catch (error) {
+        // Tratamento de Erro Específico do Prisma (Ex: ID não encontrado)
+        if (error instanceof PrismaClientKnownRequestError) {
+          if (error.code === 'P2025') {
+            // Código para 'Record to update not found.'
+            return reply
+              .status(404)
+              .send({ message: 'Solicitação não encontrada.' });
+          }
+        }
+        // Tratamento de erro Zod (embora safeParse deva pegar antes)
+        if (error instanceof ZodError) {
+          return reply.status(400).send({
+            message: 'Erro de validação.',
+            issues: error.format(),
+          });
+        }
+        // Log e erro genérico para outros problemas
+        fastify.log.error(error);
+        return reply.status(500).send({
+          message: 'Erro interno do servidor ao atualizar observação.',
+        });
       }
     }
   );

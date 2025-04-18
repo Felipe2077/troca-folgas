@@ -40,6 +40,15 @@ export const swapRequestCreateBodySchema = z.object({
     invalid_type_error: 'Grupo de Entrada inválido.',
   }),
 });
+// Schema para validar o parâmetro ID da URL
+export const requestIdParamsSchema = z.object({
+  id: z.coerce // Tenta converter string para número
+    .number({ invalid_type_error: 'ID da solicitação deve ser um número.' })
+    .int({ message: 'ID da solicitação deve ser um inteiro.' })
+    .positive({ message: 'ID da solicitação deve ser positivo.' }),
+});
 
-// Poderíamos exportar o tipo inferido também, se útil
-// export type SwapRequestCreateBody = z.infer<typeof swapRequestCreateBodySchema>;
+// Schema para validar o corpo da requisição de atualização de observação
+export const requestUpdateObservationBodySchema = z.object({
+  observation: z.string().nullable(),
+});
