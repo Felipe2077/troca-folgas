@@ -13,17 +13,20 @@ export interface AuthUser {
   loginIdentifier: string;
   role: Role;
 }
+export interface LoginCredentials {
+  loginIdentifier: string;
+  password?: string; // Senha pode ser opcional se validação ocorrer antes
+}
 
 // Define a "forma" do valor que nosso contexto fornecerá
 interface AuthContextType {
-  isLoading: boolean; // Indica se a verificação inicial de auth está ocorrendo
-  isAuthenticated: boolean; // Se o usuário está logado e autenticado
-  user: AuthUser | null; // Dados do usuário logado ou null
-  // Adicionaremos as funções login e logout aqui depois, definidas no Provider
-  // login: (credentials: LoginCredentials) => Promise<void>;
-  // logout: () => void;
-  token: string | null; // Opcional: expor o token? Por enquanto pode ser útil.
-  setToken: (token: string | null) => void; // Função para o Provider atualizar o token
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  user: AuthUser | null;
+  token: string | null;
+  setToken: (token: string | null) => void;
+  logout: () => void;
+  login: (credentials: LoginCredentials) => Promise<AuthUser>; // Retorna o usuário em caso de sucesso
 }
 
 // Cria o Contexto com um valor inicial undefined

@@ -1,4 +1,6 @@
+// apps/frontend/src/app/login/page.tsx - REATORADO COM AUTH CONTEXT
 'use client';
+
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -10,86 +12,64 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useMutation } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext'; // <-- Importa useAuth
+import { Role } from '@repo/shared-types'; // Importa Role
+import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { toast } from 'sonner';
+import { FormEvent, useState } from 'react'; // Importa FormEvent
+import { toast } from 'sonner'; // Mantém toast para erros
 
-// Tipagem para os dados enviados e recebidos da API
-interface LoginData {
-  loginIdentifier: string;
-  password?: string; // Senha opcional aqui pois podemos validar antes
-}
-interface LoginResponse {
-  token: string;
-}
-interface ApiError {
-  // Tipo simples para erros da API
-  message: string;
-  issues?: unknown; // Para erros Zod
-}
+// REMOVIDO: Tipagens LoginData, LoginResponse, ApiError (agora gerenciadas no AuthContext/AuthProvider)
+// REMOVIDO: Função async function loginUser(credentials: LoginData)
 
-async function loginUser(credentials: LoginData): Promise<LoginResponse> {
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(credentials),
-    }
-  );
-
-  // Se a resposta não for OK (ex: 400, 401, 500), lança um erro
-  if (!response.ok) {
-    const errorData: ApiError = await response.json().catch(() => ({
-      message: `Erro ${response.status}: ${response.statusText}`, // Fallback se o JSON falhar
-    }));
-    throw new Error(errorData.message || 'Falha no login');
-  }
-
-  // Se a resposta for OK, retorna o JSON (esperamos { token: "..." })
-  return response.json();
-}
-
-// Componente funcional para a página de login
+// --- Componente Principal da Página ---
 export default function LoginPage() {
-  // 3. Criar estados para os inputs
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  // ADICIONADO: Estado local para exibir erros vindos do auth.login()
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const mutation = useMutation<LoginResponse, Error, LoginData>({
-    // Tipos: Resposta Sucesso, Tipo Erro, Tipo Input
-    mutationFn: loginUser, // Função que será chamada para executar a mutação
-    onSuccess: (data) => {
-      // Ação em caso de SUCESSO
-      console.log('Login bem-sucedido!', data);
-      // Armazenar o token (ex: localStorage - PODE SER MELHORADO COM ZUSTAND DEPOIS)
-      localStorage.setItem('authToken', data.token);
-      toast.success('Login bem-sucedido!');
-      // Redirecionar para uma página pós-login (ex: dashboard ou home)
-      router.push('/'); // Redireciona para a home por enquanto
-      // Poderia usar toast para mostrar sucesso
-    },
-    onError: (error) => {
-      // Ação em caso de ERRO
-      console.error('Erro no login:', error);
-      // Mostrar mensagem de erro para o usuário (usando um estado ou toast)
-      // Exemplo simples (melhorar depois):
-      toast.error(error.message || 'Falha no login.');
-    },
-  });
-  // 5. Calcular se o botão deve estar desabilitado
-  //    (Verifica se algum dos campos, após remover espaços em branco, está vazio)
-  const isDisabled = loginIdentifier.trim() === '' || password.trim() === '';
+  // MODIFICADO: Pega 'login' e 'isLoading' do contexto, remove useMutation
+  const { login, isLoading } = useAuth();
 
-  // Função para lidar com o submit (faremos na próxima etapa)
-  const handleLogin = (event: React.FormEvent<HTMLFormElement>) => {
+  // MODIFICADO: Usa 'isLoading' do contexto para desabilitar
+  const isDisabled =
+    loginIdentifier.trim() === '' || password.trim() === '' || isLoading;
+
+  // MODIFICADO: handleSubmit agora chama auth.login() e faz o redirect
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isDisabled) return;
-    // Chama a função 'mutate' do React Query para iniciar a chamada da API
-    mutation.mutate({ loginIdentifier, password });
+    setError(null); // Limpa erros anteriores
+
+    try {
+      // Chama a função login do CONTEXTO e espera o resultado
+      const loggedUser = await login({ loginIdentifier, password });
+
+      // Se chegou aqui, o login no AuthProvider foi bem-sucedido
+      toast.success('Login bem-sucedido!'); // Mantém toast de sucesso
+
+      // Redirecionamento baseado na role retornada pelo login do AuthProvider
+      if (loggedUser.role === Role.ADMINISTRADOR) {
+        router.push('/admin/dashboard');
+      } else if (loggedUser.role === Role.ENCARREGADO) {
+        router.push('/requests/new'); // Ou para uma futura dashboard do Encarregado
+      } else {
+        // Role desconhecida ou não definida? Vai para a raiz como fallback.
+        console.warn(
+          'Role de usuário desconhecida após login:',
+          loggedUser.role
+        );
+        router.push('/');
+      }
+    } catch (err: any) {
+      // Pega o erro lançado pela função login do AuthProvider
+      console.error('Falha no login (componente):', err);
+      const errorMessage =
+        err.message || 'Erro desconhecido ao tentar fazer login.';
+      setError(errorMessage); // Define o erro local para exibição
+      toast.error(errorMessage); // Mostra o erro no toast também
+    }
   };
 
   return (
@@ -101,9 +81,12 @@ export default function LoginPage() {
             Entre com seu identificador e senha para acessar o sistema.
           </CardDescription>
         </CardHeader>
-        {/* Adicionamos o onSubmit ao form implícito do CardContent/CardFooter */}
-        <form onSubmit={handleLogin}>
+        <form onSubmit={handleSubmit}>
           <CardContent className="grid gap-4">
+            {/* ADICIONADO: Exibe erro local */}
+            {error && (
+              <p className="text-sm font-medium text-destructive">{error}</p>
+            )}
             <div className="grid gap-2">
               <Label htmlFor="loginIdentifier">Identificador (Email/CPF)</Label>
               <Input
@@ -111,10 +94,9 @@ export default function LoginPage() {
                 type="text"
                 placeholder="seu.identificador"
                 required
-                // 4. Conectar Input ao Estado
                 value={loginIdentifier}
                 onChange={(e) => setLoginIdentifier(e.target.value)}
-                disabled={mutation.isPending}
+                disabled={isLoading} // <-- Usa isLoading do contexto
               />
             </div>
             <div className="grid gap-2">
@@ -123,17 +105,24 @@ export default function LoginPage() {
                 id="password"
                 type="password"
                 required
-                // 4. Conectar Input ao Estado
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                disabled={mutation.isPending}
+                disabled={isLoading} // <-- Usa isLoading do contexto
               />
             </div>
           </CardContent>
           <CardFooter>
-            {/* 6. Aplicar 'disabled' ao Botão */}
             <Button className="w-full mt-8" type="submit" disabled={isDisabled}>
-              {mutation.isPending ? 'Entrando...' : 'Entrar'}
+              {/* MODIFICADO: Usa isLoading do contexto */}
+              {isLoading ? (
+                <>
+                  {' '}
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />{' '}
+                  Entrando...{' '}
+                </>
+              ) : (
+                'Entrar'
+              )}
             </Button>
           </CardFooter>
         </form>
