@@ -118,13 +118,15 @@ export async function requestRoutes(fastify: FastifyInstance) {
 
         // 3.3: Verificar Janela de Submissão
         try {
+          // Busca a configuração atual do banco CADA VEZ que uma request é feita
+          // Poderia otimizar com cache depois, se necessário
           const settings = await prisma.settings.findUniqueOrThrow({
-            where: { id: 1 },
-          }); // Busca config atual
+            where: { id: 1 }, // Busca a configuração única pelo ID fixo
+          });
           const now = new Date();
-          const currentDayOfWeek = now.getDay(); // 0 = Domingo, 1 = Segunda, ..., 6 = Sábado (JS Date standard)
+          const currentDayOfWeek = now.getDay(); // 0=Domingo, 1=Seg, ..., 6=Sábado (JS Date standard)
 
-          // Mapeia os Enums do Prisma para números 0-6
+          // Mapeia os Enums de Dia de Semana do Prisma/SharedTypes para números 0-6
           const dayMap: Record<DayOfWeek, number> = {
             SUNDAY: 0,
             MONDAY: 1,
@@ -137,28 +139,24 @@ export async function requestRoutes(fastify: FastifyInstance) {
           const startDayNum = dayMap[settings.submissionStartDay];
           const endDayNum = dayMap[settings.submissionEndDay];
 
-          let isAllowed = false;
-          // Lógica para checar se currentDayOfWeek está entre startDayNum e endDayNum
-          // CUIDADO: Precisa tratar o caso em que a janela "vira a semana" (ex: Sexta a Segunda)
+          let isWithinWindow = false;
+          // Verifica se o dia atual está dentro do intervalo [startDayNum, endDayNum]
+          // Trata o caso em que a janela "vira" a semana (ex: Sexta a Segunda)
           if (startDayNum <= endDayNum) {
-            // Caso normal (ex: Segunda a Quarta)
-            isAllowed =
+            // Janela normal (ex: Segunda a Quarta)
+            isWithinWindow =
               currentDayOfWeek >= startDayNum && currentDayOfWeek <= endDayNum;
           } else {
-            // Caso onde a janela vira a semana (ex: Sexta a Segunda)
-            // Está permitido se for >= Sexta OU <= Segunda
-            isAllowed =
+            // Janela que vira a semana (ex: Sexta a Segunda)
+            // Permitido se for >= Dia de Início OU <= Dia Final
+            isWithinWindow =
               currentDayOfWeek >= startDayNum || currentDayOfWeek <= endDayNum;
           }
 
-          if (!isAllowed) {
-            // Encontra o próximo dia de início
-            const nextDayNum = startDayNum;
-            let daysToAdd = (startDayNum - currentDayOfWeek + 7) % 7;
-            if (daysToAdd === 0 && startDayNum !== currentDayOfWeek)
-              daysToAdd = 7; // Ajuste se for o mesmo dia mas já passou? (simplificado)
-
-            const daysOfWeekNames = [
+          // Se NÃO estiver dentro da janela permitida...
+          if (!isWithinWindow) {
+            // Calcula o nome do próximo dia de início permitido para a mensagem de erro
+            const daysOfWeekNamesPtBr = [
               'Domingo',
               'Segunda-feira',
               'Terça-feira',
@@ -167,23 +165,26 @@ export async function requestRoutes(fastify: FastifyInstance) {
               'Sexta-feira',
               'Sábado',
             ];
-            const nextDayName = daysOfWeekNames[nextDayNum];
+            const nextOpeningDayName = daysOfWeekNamesPtBr[startDayNum];
 
-            return reply
-              .status(400)
-              .send({
-                message: `Fora do período de submissão. A janela abre na próxima ${nextDayName}.`,
-              });
+            // Retorna erro 400 Bad Request com mensagem informativa
+            return reply.status(400).send({
+              message: `Submissões fora do período permitido. A janela abre na próxima ${nextOpeningDayName}.`,
+            });
           }
+          // Se chegou aqui, está dentro da janela, continua o fluxo...
         } catch (settingsError) {
           fastify.log.error(
-            'Erro ao buscar configurações para validar janela de submissão:',
+            'Erro crítico ao buscar configurações para validar janela de submissão:',
             settingsError
           );
-          // Decide se bloqueia ou permite em caso de erro ao buscar config? Por segurança, bloquear.
+          // Se não conseguir ler as settings, é mais seguro bloquear a submissão
           return reply
             .status(500)
-            .send({ message: 'Erro ao verificar período de submissão.' });
+            .send({
+              message:
+                'Erro interno ao verificar período de submissão. Tente novamente mais tarde.',
+            });
         }
 
         // 4. Calcular eventType (Troca ou Substituição)
