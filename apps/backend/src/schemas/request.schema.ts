@@ -53,12 +53,17 @@ export const requestUpdateObservationBodySchema = z.object({
   observation: z.string().nullable(),
 });
 
+// Colunas permitidas para ordenação (adicione outras se necessário)
+const sortableColumns = z
+  .enum(['createdAt', 'swapDate', 'paybackDate', 'id'])
+  .default('createdAt'); // Define um padrão
+
+// Ordem permitida
+const sortOrderValues = z.enum(['asc', 'desc']).default('desc'); // Padrão descendente
+
 // Schema para validar os query parameters da rota GET /requests
 export const requestListQuerySchema = z.object({
-  // Status é opcional. Se vier, deve ser um dos valores do Enum SwapStatus.
   status: z.nativeEnum(SwapStatus).optional(),
-  // Poderíamos adicionar outros filtros aqui depois (data, func, etc.)
-  // funcionarioId: z.coerce.number().int().positive().optional(),
-  // startDate: z.coerce.date().optional(),
-  // endDate: z.coerce.date().optional(),
+  sortBy: sortableColumns.optional(), // Campo opcional para coluna de ordenação
+  sortOrder: sortOrderValues.optional(), // Campo opcional para direção
 });

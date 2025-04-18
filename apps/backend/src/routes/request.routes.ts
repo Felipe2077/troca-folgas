@@ -32,45 +32,44 @@ function areDatesInSameISOWeek(date1: Date, date2: Date): boolean {
 export async function requestRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/', // Usará o prefixo '/api/requests' definido em server.ts
-    {
-      onRequest: [authenticate], // Aplica o hook de autenticação JWT primeiro
-    },
+    { onRequest: [authenticate] },
     async (request, reply) => {
       try {
         // 1. Verificar Role (continua igual)
         if (request.user.role !== Role.ADMINISTRADOR) {
-          return reply.status(403).send({
-            /* ... */
-          });
+          /* ... */
         }
 
-        // 2. Validar Query Parameters (NOVO)
+        // 2. Validar Query Parameters (agora inclui sortBy/sortOrder)
         const queryParse = requestListQuerySchema.safeParse(request.query);
         if (!queryParse.success) {
           return reply.status(400).send({
-            message: 'Parâmetros de query inválidos.',
-            issues: queryParse.error.format(),
+            /* ... */
           });
         }
-        // Pega o status validado (será undefined se não foi passado ou inválido)
-        const { status: statusFilter } = queryParse.data;
+        // Pega os valores validados (com defaults se não passados)
+        const { status: statusFilter, sortBy, sortOrder } = queryParse.data;
 
-        // 3. Construir Cláusula Where do Prisma Condicionalmente (NOVO)
-        const whereClause: { status?: SwapStatus } = {}; // Começa vazio
+        // 3. Construir Cláusula Where (continua igual)
+        const whereClause: { status?: SwapStatus } = {};
         if (statusFilter) {
-          whereClause.status = statusFilter; // Adiciona filtro SÓ se status foi passado
+          whereClause.status = statusFilter;
         }
 
-        // 4. Buscar Solicitações no Banco com o Filtro (MODIFICADO)
+        // 4. Construir Cláusula OrderBy (NOVO)
+        // Cria o objeto orderBy dinamicamente: { [nomeDaColuna]: 'asc' | 'desc' }
+        const orderByClause = {
+          [sortBy || 'createdAt']: sortOrder || 'desc', // Usa defaults se não vier na query
+        };
+
+        // 5. Buscar Solicitações no Banco (MODIFICADO para incluir orderBy)
         const requests = await prisma.swapRequest.findMany({
-          where: whereClause, // <--- USA A CLÁUSULA WHERE
-          orderBy: {
-            createdAt: 'desc',
-          },
-          // include: { ... } // Se quiser incluir dados do usuário
+          where: whereClause,
+          orderBy: orderByClause, // <--- USA A CLÁUSULA ORDER BY
+          // include: { ... }
         });
 
-        // 5. Retornar a lista (filtrada ou não)
+        // 6. Retornar a lista (filtrada e ordenada)
         return reply.status(200).send({ requests });
       } catch (error) {
         // Tratamento de erro continua igual
