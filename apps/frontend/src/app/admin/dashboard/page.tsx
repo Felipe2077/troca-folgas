@@ -1,6 +1,6 @@
-// apps/frontend/src/app/admin/dashboard/page.tsx - CORRIGIDO
 'use client';
-
+import { ObservationDialog } from '@/components/admin/ObservationDialog'; // Importa o Dialog
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'; // Importa proteção
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,18 +25,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { formatDate } from '@/lib/utils';
 import {
   Role,
   SwapEventType,
   SwapRequest,
   SwapStatus,
 } from '@repo/shared-types'; // Import Role aqui também
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, MoreHorizontal } from 'lucide-react';
-// useRouter não é mais necessário AQUI para o redirect de auth
-// useAuth não é mais necessário AQUI diretamente, pois ProtectedRoute o usa
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute'; // Importa proteção
-import { formatDate } from '@/lib/utils';
+import { useState } from 'react'; // Importa useState
 
 // Função fetchSwapRequests continua a mesma
 async function fetchSwapRequests(): Promise<SwapRequest[]> {
@@ -65,9 +63,10 @@ async function fetchSwapRequests(): Promise<SwapRequest[]> {
 
 // --- Componente da Página ---
 export default function AdminDashboardPage() {
-  // Os hooks agora rodam *dentro* do contexto protegido, mas useQuery só é
-  // habilitado implicitamente se ProtectedRoute renderizar este conteúdo.
-  // A verificação de 'isAdmin' é feita pelo ProtectedRoute.
+  const [editingRequest, setEditingRequest] = useState<SwapRequest | null>(
+    null
+  );
+  const queryClient = useQueryClient(); // Pega o cliente query
   const {
     data: requests,
     isLoading: isQueryLoading,
@@ -197,7 +196,10 @@ export default function AdminDashboardPage() {
                           <DropdownMenuLabel className="border-b">
                             Ações
                           </DropdownMenuLabel>
-                          <DropdownMenuItem className="m-1.5">
+                          <DropdownMenuItem
+                            onClick={() => setEditingRequest(req)} // <-- Define qual request editar
+                            // onSelect={(e) => { e.preventDefault(); setEditingRequest(req)}} // Alternativa se onClick não funcionar bem em DropdownMenuItem
+                          >
                             Adicionar/Ver Observação
                           </DropdownMenuItem>
                           <DropdownMenuItem>
@@ -213,6 +215,15 @@ export default function AdminDashboardPage() {
           )}
         </CardContent>
       </Card>
+      <ObservationDialog
+        request={editingRequest} // Passa a request a ser editada (ou null)
+        onOpenChange={(open) => {
+          // Se o dialog for fechado (pelo botão Cancelar ou clique fora), limpa o estado
+          if (!open) {
+            setEditingRequest(null);
+          }
+        }}
+      />
     </ProtectedRoute>
   );
 }
