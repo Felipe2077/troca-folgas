@@ -220,6 +220,65 @@ export async function requestRoutes(fastify: FastifyInstance) {
       }
     }
   );
+  // --- Rota PATCH para marcar como NÃO REALIZADA (ADMIN) ---
+  fastify.patch(
+    '/:id/status', // Rota específica para mudar o status
+    {
+      onRequest: [authenticate], // Precisa estar autenticado
+    },
+    async (request, reply) => {
+      try {
+        // 1. Verificar Role (Só Admin pode fazer isso)
+        if (request.user.role !== Role.ADMINISTRADOR) {
+          return reply
+            .status(403)
+            .send({
+              message:
+                'Acesso negado. Apenas administradores podem alterar o status.',
+            });
+        }
+
+        // 2. Validar Parâmetro da Rota (ID)
+        const paramsParse = requestIdParamsSchema.safeParse(request.params);
+        if (!paramsParse.success) {
+          return reply.status(400).send({
+            message: 'ID inválido na URL.',
+            issues: paramsParse.error.format(),
+          });
+        }
+        const { id } = paramsParse.data;
+
+        // 3. Atualizar o Status no Banco de Dados
+        // Não precisamos de dados do corpo, o status é fixo
+        const updatedRequest = await prisma.swapRequest.update({
+          where: { id: id },
+          data: {
+            status: SwapStatus.NAO_REALIZADA, // Define o status diretamente
+          },
+        });
+
+        // 4. Retornar sucesso com a solicitação atualizada
+        return reply.status(200).send({ request: updatedRequest });
+      } catch (error) {
+        // Trata erro se a solicitação com o ID não for encontrada
+        if (error instanceof PrismaClientKnownRequestError) {
+          if (error.code === 'P2025') {
+            console.error(
+              `[API PATCH /requests/:id/status] Registro com ID ${(request.params as any)?.id} não encontrado (P2025).`
+            );
+            return reply
+              .status(404)
+              .send({ message: 'Solicitação não encontrada.' });
+          }
+        }
+        // Outros erros
+        fastify.log.error(error);
+        return reply
+          .status(500)
+          .send({ message: 'Erro interno do servidor ao atualizar status.' });
+      }
+    }
+  );
 
   // Adicione aqui outras rotas relacionadas a requests no futuro (GET /requests, etc.)
   fastify.log.info('Request routes registered');
