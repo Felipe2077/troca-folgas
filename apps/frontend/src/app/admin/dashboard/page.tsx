@@ -1,7 +1,7 @@
 // apps/frontend/src/app/admin/dashboard/page.tsx
 'use client'; // Marcamos como client component pois buscará dados e terá interatividade
 
-import { Badge } from '@/components/ui/badge'; // Para Status/Tipo
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -14,7 +14,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel, // Importado caso necessário pelo DropdownMenu
+  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -24,70 +24,76 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'; // Componentes da tabela
-import { MoreHorizontal } from 'lucide-react'; // Ícone para menu de ações
+} from '@/components/ui/table';
+import { MoreHorizontal } from 'lucide-react';
+
+// --- Tipagem (Importando do nosso pacote compartilhado) ---
+import {
+  EmployeeFunction,
+  ReliefGroup,
+  SwapEventType,
+  SwapRequest,
+  SwapStatus,
+} from '@repo/shared-types';
 
 // --- Dados Fictícios (Dummy Data) ---
-// Substituiremos pela chamada da API GET /api/requests depois
-const dummyRequests = [
+// Usando o tipo importado SwapRequest
+const dummyRequests: SwapRequest[] = [
+  // Ajustando para usar Date e Enums/Tipos corretos
   {
     id: 1,
     employeeIdOut: '111',
     employeeIdIn: '222',
-    swapDate: new Date('2025-05-04'),
-    paybackDate: new Date('2025-05-11'),
-    employeeFunction: 'MOTORISTA',
-    groupOut: 'G1',
-    groupIn: 'G2',
-    eventType: 'SUBSTITUICAO',
-    status: 'AGENDADO',
+    swapDate: new Date('2025-05-04T03:00:00Z'),
+    paybackDate: new Date('2025-05-11T03:00:00Z'),
+    employeeFunction: EmployeeFunction.MOTORISTA,
+    groupOut: ReliefGroup.G1,
+    groupIn: ReliefGroup.G2,
+    eventType: SwapEventType.SUBSTITUICAO,
+    status: SwapStatus.AGENDADO,
     submittedById: 1,
     createdAt: new Date('2025-04-17T10:00:00Z'),
+    updatedAt: new Date('2025-04-17T10:00:00Z'),
+    observation: null,
   },
   {
     id: 2,
     employeeIdOut: '555',
     employeeIdIn: '666',
-    swapDate: new Date('2025-05-10'),
-    paybackDate: new Date('2025-05-10'), // Mesmo dia -> Troca
-    employeeFunction: 'COBRADOR',
-    groupOut: 'FIXO_DOMINGO',
-    groupIn: 'G1',
-    eventType: 'TROCA',
-    status: 'NAO_REALIZADA',
+    swapDate: new Date('2025-05-10T03:00:00Z'),
+    paybackDate: new Date('2025-05-10T03:00:00Z'), // Mesmo dia -> Troca? Ajustar data para ter troca real
+    employeeFunction: EmployeeFunction.COBRADOR,
+    groupOut: ReliefGroup.FIXO_DOMINGO,
+    groupIn: ReliefGroup.G1,
+    eventType: SwapEventType.TROCA,
+    status: SwapStatus.NAO_REALIZADA,
     submittedById: 2,
     createdAt: new Date('2025-04-18T09:30:00Z'),
+    updatedAt: new Date('2025-04-18T11:00:00Z'),
+    observation: 'Colaborador faltou.',
   },
-  {
-    id: 3,
-    employeeIdOut: '333',
-    employeeIdIn: '444',
-    swapDate: new Date('2025-05-17'),
-    paybackDate: new Date('2025-05-25'),
-    employeeFunction: 'MOTORISTA',
-    groupOut: 'G2',
-    groupIn: 'SAB_DOMINGO',
-    eventType: 'SUBSTITUICAO',
-    status: 'AGENDADO',
-    submittedById: 1,
-    createdAt: new Date('2025-04-18T10:15:00Z'),
-  },
+  // Adicione mais um exemplo se quiser
 ];
 
-// --- Função Helper para Formatar Data (pode mover para /lib/utils.ts) ---
+// --- Função Helper para Formatar Data ---
 const formatDate = (date: Date | null | undefined) => {
   if (!date) return '-';
-  return date.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
+  // Garantir que 'date' é um objeto Date antes de formatar
+  try {
+    return new Date(date).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  } catch (_e) {
+    return 'Data inválida';
+  }
 };
 
 // --- Componente da Página ---
 export default function AdminDashboardPage() {
+  // Por enquanto, apenas renderiza a UI estática com dados dummy
   return (
-    // Usando Card para envolver a tabela (opcional)
     <Card>
       <CardHeader>
         <CardTitle>Dashboard do Administrador</CardTitle>
@@ -97,11 +103,9 @@ export default function AdminDashboardPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {/* Componente Table do Shadcn/ui */}
         <Table>
           <TableHeader>
             <TableRow>
-              {/* Definindo os Cabeçalhos das Colunas */}
               <TableHead className="w-[50px]">ID</TableHead>
               <TableHead>Sai (Crachá)</TableHead>
               <TableHead>Entra (Crachá)</TableHead>
@@ -110,16 +114,15 @@ export default function AdminDashboardPage() {
               <TableHead>Data Pagamento</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Solicitante ID</TableHead>
+              {/* <TableHead>Solicitante ID</TableHead> */}
               <TableHead>Criado Em</TableHead>
               <TableHead>
                 <span className="sr-only">Ações</span>
               </TableHead>
-              {/* Coluna sem título visível */}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {/* Mapeando os dados fictícios para linhas da tabela */}
+            {/* Mapeando os dados fictícios */}
             {dummyRequests.map((req) => (
               <TableRow key={req.id}>
                 <TableCell className="font-medium">{req.id}</TableCell>
@@ -129,29 +132,30 @@ export default function AdminDashboardPage() {
                 <TableCell>{formatDate(req.swapDate)}</TableCell>
                 <TableCell>{formatDate(req.paybackDate)}</TableCell>
                 <TableCell>
-                  {/* Usando Badge para destacar o Tipo */}
                   <Badge
                     variant={
-                      req.eventType === 'TROCA' ? 'secondary' : 'outline'
+                      req.eventType === SwapEventType.TROCA
+                        ? 'secondary'
+                        : 'outline'
                     }
                   >
                     {req.eventType}
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  {/* Usando Badge para destacar o Status */}
                   <Badge
                     variant={
-                      req.status === 'NAO_REALIZADA' ? 'destructive' : 'default'
+                      req.status === SwapStatus.NAO_REALIZADA
+                        ? 'destructive'
+                        : 'default'
                     }
                   >
                     {req.status}
                   </Badge>
                 </TableCell>
-                <TableCell>{req.submittedById}</TableCell>
+                {/* <TableCell>{req.submittedById}</TableCell> */}
                 <TableCell>{formatDate(req.createdAt)}</TableCell>
                 <TableCell>
-                  {/* Dropdown Menu como placeholder para futuras ações */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button aria-haspopup="true" size="icon" variant="ghost">
@@ -161,7 +165,6 @@ export default function AdminDashboardPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                      {/* Itens de exemplo, sem funcionalidade ainda */}
                       <DropdownMenuItem>
                         Adicionar/Ver Observação
                       </DropdownMenuItem>
