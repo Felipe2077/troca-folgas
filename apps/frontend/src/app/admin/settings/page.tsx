@@ -26,6 +26,7 @@ import { DayOfWeek, Role, Settings } from '@repo/shared-types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import { FormEvent, useEffect, useState } from 'react'; // Importa FormEvent e React
+import { toast } from 'sonner';
 
 const dayOfWeekPortuguese: Record<DayOfWeek, string> = {
   SUNDAY: 'Domingo',
@@ -145,11 +146,11 @@ export default function SettingsPage() {
       onSuccess: (updatedSettings) => {
         console.log('Configurações salvas:', updatedSettings);
         queryClient.setQueryData(['settings'], updatedSettings);
-        alert('Configurações salvas com sucesso!');
+        toast.success('Configurações salvas com sucesso!');
         setFormError(null);
       },
       onError: (error) => {
-        console.error('Erro ao salvar configurações:', error);
+        toast.error(error.message || 'Erro ao salvar configurações.');
         setFormError(error.message);
       },
     }

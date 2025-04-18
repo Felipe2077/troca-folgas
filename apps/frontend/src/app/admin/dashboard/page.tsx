@@ -53,6 +53,7 @@ import {
   MoreHorizontal,
 } from 'lucide-react'; // <-- MODIFICADO: Adiciona ícones de seta
 import { useState } from 'react'; // <-- MODIFICADO: Importa React explicitamente se precisar de Fragments <>
+import { toast } from 'sonner';
 
 // --- Tipos Específicos da Página ---
 // Define as colunas que permitiremos ordenar (baseado no schema Zod do backend)
@@ -169,11 +170,11 @@ export default function AdminDashboardPage() {
     onSuccess: (updatedRequest) => {
       console.log('Status atualizado com sucesso para:', updatedRequest.status);
       queryClient.invalidateQueries({ queryKey: ['adminSwapRequests'] });
-      alert('Solicitação marcada como Não Realizada com sucesso!');
+      toast.success('Status da solicitação atualizado com sucesso!');
     },
     onError: (error) => {
       console.error('Erro ao marcar como não realizada:', error);
-      alert(`Erro: ${error.message}`);
+      toast.error(error.message || 'Erro ao marcar como não realizada.');
     },
   });
 

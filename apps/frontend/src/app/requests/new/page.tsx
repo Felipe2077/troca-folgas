@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Role } from '@repo/shared-types'; // Importa o Enum Role compartilhado
+import { toast } from 'sonner';
 
 // Tipos (Enum podem ser substituídos por string se não vierem de pacote compartilhado)
 const employeeFunctionOptions = ['MOTORISTA', 'COBRADOR'] as const;
@@ -127,7 +128,7 @@ export default function NewRequestPage() {
     onSuccess: (data) => {
       console.log('Solicitação criada com sucesso:', data);
       setApiError(null); // Limpa erros anteriores
-      alert('Solicitação de troca/substituição enviada com sucesso!');
+      toast.success('Solicitação enviada com sucesso!');
       // Limpar formulário?
       setEmployeeIdOut('');
       setEmployeeIdIn('');
@@ -138,7 +139,7 @@ export default function NewRequestPage() {
     onError: (error) => {
       console.error('Erro ao criar solicitação:', error);
       setApiError(error.message); // Guarda a mensagem de erro para exibir na UI
-      // alert(`Erro ao criar solicitação: ${error.message}`); // Remove alert se usar estado
+      toast.error(error.message || 'Erro ao criar solicitação.');
     },
   });
 

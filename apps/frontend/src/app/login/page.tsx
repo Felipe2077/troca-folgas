@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 // Tipagem para os dados enviados e recebidos da API
 interface LoginData {
@@ -66,6 +67,7 @@ export default function LoginPage() {
       console.log('Login bem-sucedido!', data);
       // Armazenar o token (ex: localStorage - PODE SER MELHORADO COM ZUSTAND DEPOIS)
       localStorage.setItem('authToken', data.token);
+      toast.success('Login bem-sucedido!');
       // Redirecionar para uma página pós-login (ex: dashboard ou home)
       router.push('/'); // Redireciona para a home por enquanto
       // Poderia usar toast para mostrar sucesso
@@ -75,7 +77,7 @@ export default function LoginPage() {
       console.error('Erro no login:', error);
       // Mostrar mensagem de erro para o usuário (usando um estado ou toast)
       // Exemplo simples (melhorar depois):
-      alert(`Erro no login: ${error.message}`);
+      toast.error(error.message || 'Falha no login.');
     },
   });
   // 5. Calcular se o botão deve estar desabilitado
