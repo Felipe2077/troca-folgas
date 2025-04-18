@@ -1,7 +1,7 @@
-// apps/frontend/src/app/admin/dashboard/page.tsx - COM FILTRO CORRIGIDO
+// apps/frontend/src/app/admin/dashboard/page.tsx - COM FILTRO E ORDENAÇÃO
 'use client';
 
-// --- Imports (mantidos como estavam, garantindo useState) ---
+// --- Imports ---
 import { ObservationDialog } from '@/components/admin/ObservationDialog';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Badge } from '@/components/ui/badge';
@@ -20,14 +20,14 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Label } from '@/components/ui/label'; // Import Label
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'; // Import Select
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -44,28 +44,55 @@ import {
   SwapStatus,
 } from '@repo/shared-types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, MoreHorizontal } from 'lucide-react';
-import { useState } from 'react'; // Garantir que useState está importado
+// Imports de ícones (Loader2 já estava, adiciona os de seta)
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Loader2,
+  MoreHorizontal,
+} from 'lucide-react'; // <-- MODIFICADO: Adiciona ícones de seta
+import { useState } from 'react'; // <-- MODIFICADO: Importa React explicitamente se precisar de Fragments <>
 
-// --- Funções de API Call (mantidas como estavam) ---
+// --- Tipos Específicos da Página ---
+// Define as colunas que permitiremos ordenar (baseado no schema Zod do backend)
+type SortableColumn = 'createdAt' | 'swapDate' | 'paybackDate' | 'id'; // <-- ADICIONADO: Tipo para colunas ordenáveis
 
-// Função fetchSwapRequests (JÁ CORRIGIDA para aceitar filtro)
+// --- Funções de API Call ---
+
+// Função fetchSwapRequests (MODIFICADA para usar sortBy/sortOrder corretamente)
 async function fetchSwapRequests(
-  statusFilter: SwapStatus | 'ALL'
+  statusFilter: SwapStatus | 'ALL',
+  sortBy: SortableColumn, // Recebe sortBy
+  sortOrder: 'asc' | 'desc' // Recebe sortOrder
 ): Promise<SwapRequest[]> {
   const token = localStorage.getItem('authToken');
   if (!token) {
     throw new Error('Token não encontrado');
   }
+
   let apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/requests`;
+  const queryParams = new URLSearchParams();
+
   if (statusFilter !== 'ALL') {
-    apiUrl += `?status=${statusFilter}`;
+    queryParams.append('status', statusFilter);
   }
+  // *** MODIFICADO: Adiciona sortBy e sortOrder aos parâmetros ***
+  queryParams.append('sortBy', sortBy);
+  queryParams.append('sortOrder', sortOrder);
+
+  const queryString = queryParams.toString();
+  if (queryString) {
+    apiUrl += `?${queryString}`;
+  }
+
   console.log(`>>> Fetching requests with URL: ${apiUrl}`);
+
   const response = await fetch(apiUrl, {
-    method: 'GET',
+    method: 'GET', // Certifica que o método GET está explícito (embora seja default)
     headers: { Authorization: `Bearer ${token}` },
   });
+
   if (!response.ok) {
     const errorData = await response
       .json()
@@ -104,23 +131,28 @@ async function markRequestAsNotRealizedApi({
 
 // --- Componente Principal da Página ---
 export default function AdminDashboardPage() {
-  // Estado para o Dialog de Observação
+  // Estados existentes
   const [editingRequest, setEditingRequest] = useState<SwapRequest | null>(
     null
   );
-  // *** ADICIONADO: Estado para o filtro de Status ***
   const [statusFilter, setStatusFilter] = useState<SwapStatus | 'ALL'>('ALL');
+  // ADICIONADO: Estados para ordenação
+  const [sortColumn, setSortColumn] = useState<SortableColumn>('createdAt'); // Padrão: createdAt
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc'); // Padrão: desc
+
   const queryClient = useQueryClient();
 
-  // Query para buscar as solicitações (agora usa statusFilter corretamente)
+  // Query para buscar as solicitações (MODIFICADA queryKey e queryFn)
   const {
     data: requests,
     isLoading: isQueryLoading,
     isError,
     error,
   } = useQuery<SwapRequest[], Error>({
-    queryKey: ['adminSwapRequests', statusFilter], // A queryKey DEPENDE do filtro
-    queryFn: () => fetchSwapRequests(statusFilter), // A queryFn PASSA o filtro
+    // Query key agora inclui filtro E ordenação
+    queryKey: ['adminSwapRequests', statusFilter, sortColumn, sortDirection],
+    // queryFn agora chama fetchSwapRequests passando filtro E ordenação
+    queryFn: () => fetchSwapRequests(statusFilter, sortColumn, sortDirection),
     refetchOnWindowFocus: false,
     onError: (err) => {
       console.error('Erro ao buscar dados da dashboard:', err);
@@ -156,6 +188,18 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // ADICIONADO: Handler para trocar a ordenação
+  const handleSort = (column: SortableColumn) => {
+    // Se clicou na mesma coluna, inverte a direção
+    if (sortColumn === column) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      // Se clicou em outra coluna, define como a nova coluna e usa ordem padrão (desc)
+      setSortColumn(column);
+      setSortDirection('desc');
+    }
+  };
+
   // ----- Lógica de Renderização -----
   return (
     <ProtectedRoute allowedRoles={[Role.ADMINISTRADOR]}>
@@ -168,7 +212,7 @@ export default function AdminDashboardPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* *** ADICIONADO: Bloco do Select para filtro *** */}
+          {/* Bloco do Select para filtro (mantido como estava) */}
           <div className="flex items-center gap-2 mb-4">
             <Label htmlFor="status-filter" className="shrink-0">
               Filtrar por Status:
@@ -194,9 +238,8 @@ export default function AdminDashboardPage() {
               </SelectContent>
             </Select>
           </div>
-          {/* *** Fim do Bloco do Select *** */}
 
-          {/* Lógica de Loading/Error/Table (mantida como estava) */}
+          {/* Lógica de Loading/Error/Table */}
           {isQueryLoading && (
             <div className="flex justify-center items-center min-h-[300px]">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -204,7 +247,7 @@ export default function AdminDashboardPage() {
           )}
           {isError && (
             <div className="text-center p-4 text-destructive bg-destructive/10 rounded-md">
-              Erro ao buscar solicitações:{' '}
+              Erro ao buscar solicitações
               {error?.message || 'Erro desconhecido'}
             </div>
           )}
@@ -215,27 +258,49 @@ export default function AdminDashboardPage() {
                 Nenhuma solicitação encontrada.
               </div>
             )}
+
           {!isQueryLoading && !isError && requests && requests.length > 0 && (
             <Table>
               <TableHeader>
-                {/* ... */}
                 <TableRow>
+                  {/* Cabeçalhos - MODIFICADO 'Criado Em' */}
                   <TableHead className="w-[50px]">ID</TableHead>
                   <TableHead>Sai (Crachá)</TableHead>
                   <TableHead>Entra (Crachá)</TableHead>
                   <TableHead>Função</TableHead>
                   <TableHead>Data Troca</TableHead>
+                  {/* TODO: Tornar clicável depois */}
                   <TableHead>Data Pagamento</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Observação</TableHead>
-                  <TableHead>Criado Em</TableHead>
+                  {/* MODIFICADO: Cabeçalho 'Criado Em' agora é um botão clicável */}
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleSort('createdAt')}
+                      className="px-1"
+                    >
+                      {/* Ajuste padding se necessário */}
+                      Criado Em
+                      {sortColumn === 'createdAt' ? (
+                        sortDirection === 'asc' ? (
+                          <ArrowUp className="ml-2 h-4 w-4" />
+                        ) : (
+                          <ArrowDown className="ml-2 h-4 w-4" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" /> // Opacidade menor se não ativo
+                      )}
+                    </Button>
+                  </TableHead>
                   <TableHead>
                     <span className="sr-only">Ações</span>
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {/* Mapeamento dos dados (sem alteração aqui) */}
                 {requests.map((req) => (
                   <TableRow key={req.id}>
                     <TableCell className="font-medium">{req.id}</TableCell>

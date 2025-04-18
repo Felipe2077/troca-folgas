@@ -94,4 +94,14 @@ model AuditLog {
   @@map("audit_logs") // Nome da tabela no banco
 }
 
-// Adicionar model para AdminSettings (deadline) depois, na Fase 4.
+model Settings {
+  id                     Int      @id @default(1) // ID Fixo para garantir linha única
+
+  submissionDeadlineDays Int      @default(7) // Nº de dias ANTES da troca para submeter (default: 7)
+  // Adicione outros campos de configuração aqui no futuro, se necessário
+
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@map("settings") // Mapeia para a tabela 'settings' no banco
+}
