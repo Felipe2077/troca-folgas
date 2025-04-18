@@ -27,6 +27,27 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import { FormEvent, useEffect, useState } from 'react'; // Importa FormEvent e React
 
+const dayOfWeekPortuguese: Record<DayOfWeek, string> = {
+  SUNDAY: 'Domingo',
+  MONDAY: 'Segunda-feira',
+  TUESDAY: 'Terça-feira',
+  WEDNESDAY: 'Quarta-feira',
+  THURSDAY: 'Quinta-feira',
+  FRIDAY: 'Sexta-feira',
+  SATURDAY: 'Sábado',
+};
+
+// Array com os valores do Enum na ordem desejada para o dropdown
+const orderedDaysOfWeek: DayOfWeek[] = [
+  DayOfWeek.SUNDAY,
+  DayOfWeek.MONDAY,
+  DayOfWeek.TUESDAY,
+  DayOfWeek.WEDNESDAY,
+  DayOfWeek.THURSDAY,
+  DayOfWeek.FRIDAY,
+  DayOfWeek.SATURDAY,
+];
+
 // --- Funções de API Call ---
 async function fetchSettings(token: string | null): Promise<Settings> {
   if (!token) {
@@ -173,9 +194,10 @@ export default function SettingsPage() {
                       <SelectValue placeholder="Selecione o dia inicial" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(DayOfWeek).map(([key, value]) => (
-                        <SelectItem key={key} value={value}>
-                          {key}
+                      {orderedDaysOfWeek.map((dayValue) => (
+                        <SelectItem key={dayValue} value={dayValue}>
+                          {/* Usa o mapeamento para exibir em Português */}
+                          {dayOfWeekPortuguese[dayValue]}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -193,9 +215,10 @@ export default function SettingsPage() {
                       <SelectValue placeholder="Selecione o dia final" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(DayOfWeek).map(([key, value]) => (
-                        <SelectItem key={key} value={value}>
-                          {key}
+                      {orderedDaysOfWeek.map((dayValue) => (
+                        <SelectItem key={dayValue} value={dayValue}>
+                          {/* Usa o mapeamento para exibir em Português */}
+                          {dayOfWeekPortuguese[dayValue]}
                         </SelectItem>
                       ))}
                     </SelectContent>

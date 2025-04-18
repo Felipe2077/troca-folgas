@@ -70,3 +70,12 @@ export const DayOfWeek = {
   SATURDAY: 'SATURDAY',
 } as const;
 export type DayOfWeek = (typeof DayOfWeek)[keyof typeof DayOfWeek];
+
+// Interface/Tipo para Settings (ATUALIZADO)
+export interface Settings {
+  id: number; // Geralmente 1
+  submissionStartDay: DayOfWeek;
+  submissionEndDay: DayOfWeek;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
