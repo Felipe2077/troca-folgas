@@ -1,8 +1,9 @@
-// apps/frontend/src/app/admin/dashboard/page.tsx
+// apps/frontend/src/app/admin/dashboard/page.tsx - COM FILTRO CORRIGIDO
 'use client';
 
-import { ObservationDialog } from '@/components/admin/ObservationDialog'; // Importa o Dialog
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute'; // Importa proteção
+// --- Imports (mantidos como estavam, garantindo useState) ---
+import { ObservationDialog } from '@/components/admin/ObservationDialog';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,6 +20,14 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Label } from '@/components/ui/label'; // Import Label
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'; // Import Select
 import {
   Table,
   TableBody,
@@ -33,26 +42,30 @@ import {
   SwapEventType,
   SwapRequest,
   SwapStatus,
-} from '@repo/shared-types'; // Import tipos
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'; // Import hooks do React Query
+} from '@repo/shared-types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, MoreHorizontal } from 'lucide-react';
-import { useState } from 'react'; // Import useState
+import { useState } from 'react'; // Garantir que useState está importado
 
-// --- Funções de API Call (fora do componente para clareza) ---
+// --- Funções de API Call (mantidas como estavam) ---
 
-// Função para buscar todas as solicitações (para useQuery)
-async function fetchSwapRequests(): Promise<SwapRequest[]> {
+// Função fetchSwapRequests (JÁ CORRIGIDA para aceitar filtro)
+async function fetchSwapRequests(
+  statusFilter: SwapStatus | 'ALL'
+): Promise<SwapRequest[]> {
   const token = localStorage.getItem('authToken');
   if (!token) {
     throw new Error('Token não encontrado');
   }
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/requests`,
-    {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${token}` },
-    }
-  );
+  let apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/requests`;
+  if (statusFilter !== 'ALL') {
+    apiUrl += `?status=${statusFilter}`;
+  }
+  console.log(`>>> Fetching requests with URL: ${apiUrl}`);
+  const response = await fetch(apiUrl, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${token}` },
+  });
   if (!response.ok) {
     const errorData = await response
       .json()
@@ -65,81 +78,65 @@ async function fetchSwapRequests(): Promise<SwapRequest[]> {
   return data.requests || [];
 }
 
-// Interface para parâmetros da função de marcar como não realizada
+// Função markRequestAsNotRealizedApi (mantida como estava)
 interface MarkAsNotRealizedParams {
   requestId: number;
   token: string;
 }
-
-// Função que chama a API PATCH /status (para useMutation)
 async function markRequestAsNotRealizedApi({
   requestId,
   token,
 }: MarkAsNotRealizedParams): Promise<SwapRequest> {
-  console.log(
-    `>>> [markRequestAsNotRealizedApi] Tentando PATCH para ID: ${requestId}`
-  ); // Log de depuração
-  // ** CORRIGINDO A URL AQUI **
   const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/requests/${requestId}/status`;
-  console.log(`>>> [markRequestAsNotRealizedApi] Fetching URL: ${apiUrl}`);
-
   const response = await fetch(apiUrl, {
     method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      // Não precisa de Content-Type ou body
-    },
+    headers: { Authorization: `Bearer ${token}` },
   });
-
-  console.log(
-    `>>> [markRequestAsNotRealizedApi] Fetch response status: ${response.status}`
-  );
-
   if (!response.ok) {
     const errorData = await response
       .json()
       .catch(() => ({ message: `Erro ${response.status}` }));
-    console.error('>>> [markRequestAsNotRealizedApi] Fetch error:', errorData);
     throw new Error(errorData.message || 'Falha ao marcar como não realizada.');
   }
   const data = await response.json();
-  return data.request; // Espera { request: ... }
+  return data.request;
 }
 
 // --- Componente Principal da Página ---
 export default function AdminDashboardPage() {
+  // Estado para o Dialog de Observação
   const [editingRequest, setEditingRequest] = useState<SwapRequest | null>(
     null
   );
+  // *** ADICIONADO: Estado para o filtro de Status ***
+  const [statusFilter, setStatusFilter] = useState<SwapStatus | 'ALL'>('ALL');
   const queryClient = useQueryClient();
 
-  // Query para buscar as solicitações
+  // Query para buscar as solicitações (agora usa statusFilter corretamente)
   const {
     data: requests,
     isLoading: isQueryLoading,
     isError,
     error,
   } = useQuery<SwapRequest[], Error>({
-    queryKey: ['adminSwapRequests'],
-    queryFn: fetchSwapRequests,
+    queryKey: ['adminSwapRequests', statusFilter], // A queryKey DEPENDE do filtro
+    queryFn: () => fetchSwapRequests(statusFilter), // A queryFn PASSA o filtro
     refetchOnWindowFocus: false,
     onError: (err) => {
       console.error('Erro ao buscar dados da dashboard:', err);
     },
   });
 
-  // ** MUTATION para marcar como não realizada (no nível correto) **
+  // Mutation para marcar como não realizada (mantida como estava)
   const markAsNotRealizedMutation = useMutation<SwapRequest, Error, number>({
-    // Resposta, Erro, Input (requestId)
-    // mutationFn agora só precisa do ID, pega token e chama a função API
     mutationFn: async (requestId) => {
       const token = localStorage.getItem('authToken');
       if (!token) throw new Error('Token não encontrado para mutação.');
-      return markRequestAsNotRealizedApi({ requestId, token }); // Chama a função externa
+      return markRequestAsNotRealizedApi({ requestId, token });
     },
     onSuccess: (updatedRequest) => {
       console.log('Status atualizado com sucesso para:', updatedRequest.status);
-      queryClient.invalidateQueries({ queryKey: ['adminSwapRequests'] }); // Invalida para refetch
+      queryClient.invalidateQueries({ queryKey: ['adminSwapRequests'] });
       alert('Solicitação marcada como Não Realizada com sucesso!');
     },
     onError: (error) => {
@@ -148,20 +145,18 @@ export default function AdminDashboardPage() {
     },
   });
 
-  // ** HANDLER para o clique no menu (no nível correto) **
+  // Handler para marcar como não realizada (mantido como estava)
   const handleMarkAsNotRealized = (requestId: number) => {
     if (
       window.confirm(
         `Tem certeza que deseja marcar a solicitação ID ${requestId} como NÃO REALIZADA?`
       )
     ) {
-      markAsNotRealizedMutation.mutate(requestId); // Dispara a mutação
+      markAsNotRealizedMutation.mutate(requestId);
     }
   };
 
   // ----- Lógica de Renderização -----
-
-  // ProtectedRoute envolve tudo
   return (
     <ProtectedRoute allowedRoles={[Role.ADMINISTRADOR]}>
       <Card>
@@ -173,22 +168,46 @@ export default function AdminDashboardPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Loading da Query */}
+          {/* *** ADICIONADO: Bloco do Select para filtro *** */}
+          <div className="flex items-center gap-2 mb-4">
+            <Label htmlFor="status-filter" className="shrink-0">
+              Filtrar por Status:
+            </Label>
+            <Select
+              value={statusFilter}
+              onValueChange={(value: string) => {
+                setStatusFilter(
+                  value === 'ALL' ? 'ALL' : (value as SwapStatus)
+                );
+              }}
+            >
+              <SelectTrigger id="status-filter" className="w-[180px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Todos</SelectItem>
+                {Object.values(SwapStatus).map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {status}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {/* *** Fim do Bloco do Select *** */}
+
+          {/* Lógica de Loading/Error/Table (mantida como estava) */}
           {isQueryLoading && (
             <div className="flex justify-center items-center min-h-[300px]">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           )}
-
-          {/* Erro da Query */}
           {isError && (
             <div className="text-center p-4 text-destructive bg-destructive/10 rounded-md">
               Erro ao buscar solicitações:{' '}
               {error?.message || 'Erro desconhecido'}
             </div>
           )}
-
-          {/* Sem Dados */}
           {!isQueryLoading &&
             !isError &&
             (!requests || requests.length === 0) && (
@@ -196,11 +215,10 @@ export default function AdminDashboardPage() {
                 Nenhuma solicitação encontrada.
               </div>
             )}
-
-          {/* Tabela com Dados */}
           {!isQueryLoading && !isError && requests && requests.length > 0 && (
             <Table>
               <TableHeader>
+                {/* ... */}
                 <TableRow>
                   <TableHead className="w-[50px]">ID</TableHead>
                   <TableHead>Sai (Crachá)</TableHead>
@@ -271,21 +289,17 @@ export default function AdminDashboardPage() {
                           >
                             Adicionar/Ver Observação
                           </DropdownMenuItem>
-                          {/* Item de Marcar como Não Realizada */}
                           <DropdownMenuItem
-                            // Chama o handler CORRETO agora
                             onSelect={(e) => {
                               e.preventDefault();
                               handleMarkAsNotRealized(req.id);
                             }}
-                            // Desabilita se já for NAO_REALIZADA ou se a mutação estiver rodando
                             disabled={
                               req.status === SwapStatus.NAO_REALIZADA ||
                               markAsNotRealizedMutation.isPending
                             }
                             className="text-red-600 focus:bg-red-100 focus:text-red-700"
                           >
-                            {/* Feedback de loading específico para esta mutação/linha */}
                             {markAsNotRealizedMutation.isPending &&
                             markAsNotRealizedMutation.variables === req.id
                               ? 'Marcando...'
@@ -302,7 +316,6 @@ export default function AdminDashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Renderização condicional do Dialog (inalterada) */}
       <ObservationDialog
         request={editingRequest}
         onOpenChange={(open) => {
