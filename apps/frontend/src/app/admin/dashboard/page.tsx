@@ -1,4 +1,6 @@
+// apps/frontend/src/app/admin/dashboard/page.tsx
 'use client';
+
 import { ObservationDialog } from '@/components/admin/ObservationDialog'; // Importa o Dialog
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'; // Importa proteção
 import { Badge } from '@/components/ui/badge';
@@ -31,12 +33,14 @@ import {
   SwapEventType,
   SwapRequest,
   SwapStatus,
-} from '@repo/shared-types'; // Import Role aqui também
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+} from '@repo/shared-types'; // Import tipos
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'; // Import hooks do React Query
 import { Loader2, MoreHorizontal } from 'lucide-react';
-import { useState } from 'react'; // Importa useState
+import { useState } from 'react'; // Import useState
 
-// Função fetchSwapRequests continua a mesma
+// --- Funções de API Call (fora do componente para clareza) ---
+
+// Função para buscar todas as solicitações (para useQuery)
 async function fetchSwapRequests(): Promise<SwapRequest[]> {
   const token = localStorage.getItem('authToken');
   if (!token) {
@@ -61,12 +65,55 @@ async function fetchSwapRequests(): Promise<SwapRequest[]> {
   return data.requests || [];
 }
 
-// --- Componente da Página ---
+// Interface para parâmetros da função de marcar como não realizada
+interface MarkAsNotRealizedParams {
+  requestId: number;
+  token: string;
+}
+
+// Função que chama a API PATCH /status (para useMutation)
+async function markRequestAsNotRealizedApi({
+  requestId,
+  token,
+}: MarkAsNotRealizedParams): Promise<SwapRequest> {
+  console.log(
+    `>>> [markRequestAsNotRealizedApi] Tentando PATCH para ID: ${requestId}`
+  ); // Log de depuração
+  // ** CORRIGINDO A URL AQUI **
+  const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/requests/${requestId}/status`;
+  console.log(`>>> [markRequestAsNotRealizedApi] Fetching URL: ${apiUrl}`);
+
+  const response = await fetch(apiUrl, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      // Não precisa de Content-Type ou body
+    },
+  });
+
+  console.log(
+    `>>> [markRequestAsNotRealizedApi] Fetch response status: ${response.status}`
+  );
+
+  if (!response.ok) {
+    const errorData = await response
+      .json()
+      .catch(() => ({ message: `Erro ${response.status}` }));
+    console.error('>>> [markRequestAsNotRealizedApi] Fetch error:', errorData);
+    throw new Error(errorData.message || 'Falha ao marcar como não realizada.');
+  }
+  const data = await response.json();
+  return data.request; // Espera { request: ... }
+}
+
+// --- Componente Principal da Página ---
 export default function AdminDashboardPage() {
   const [editingRequest, setEditingRequest] = useState<SwapRequest | null>(
     null
   );
-  const queryClient = useQueryClient(); // Pega o cliente query
+  const queryClient = useQueryClient();
+
+  // Query para buscar as solicitações
   const {
     data: requests,
     isLoading: isQueryLoading,
@@ -76,21 +123,47 @@ export default function AdminDashboardPage() {
     queryKey: ['adminSwapRequests'],
     queryFn: fetchSwapRequests,
     refetchOnWindowFocus: false,
-    // A opção 'enabled' não é mais estritamente necessária aqui,
-    // pois o ProtectedRoute impede a renderização se não for Admin.
-    // Mas pode manter como dupla garantia se quiser:
-    // enabled: !!useAuth().user && useAuth().user.role === Role.ADMINISTRADOR (precisaria chamar useAuth() aqui)
-    // Vamos remover por simplicidade por enquanto.
     onError: (err) => {
       console.error('Erro ao buscar dados da dashboard:', err);
-      // NENHUM REDIRECT AQUI
     },
   });
 
+  // ** MUTATION para marcar como não realizada (no nível correto) **
+  const markAsNotRealizedMutation = useMutation<SwapRequest, Error, number>({
+    // Resposta, Erro, Input (requestId)
+    // mutationFn agora só precisa do ID, pega token e chama a função API
+    mutationFn: async (requestId) => {
+      const token = localStorage.getItem('authToken');
+      if (!token) throw new Error('Token não encontrado para mutação.');
+      return markRequestAsNotRealizedApi({ requestId, token }); // Chama a função externa
+    },
+    onSuccess: (updatedRequest) => {
+      console.log('Status atualizado com sucesso para:', updatedRequest.status);
+      queryClient.invalidateQueries({ queryKey: ['adminSwapRequests'] }); // Invalida para refetch
+      alert('Solicitação marcada como Não Realizada com sucesso!');
+    },
+    onError: (error) => {
+      console.error('Erro ao marcar como não realizada:', error);
+      alert(`Erro: ${error.message}`);
+    },
+  });
+
+  // ** HANDLER para o clique no menu (no nível correto) **
+  const handleMarkAsNotRealized = (requestId: number) => {
+    if (
+      window.confirm(
+        `Tem certeza que deseja marcar a solicitação ID ${requestId} como NÃO REALIZADA?`
+      )
+    ) {
+      markAsNotRealizedMutation.mutate(requestId); // Dispara a mutação
+    }
+  };
+
+  // ----- Lógica de Renderização -----
+
+  // ProtectedRoute envolve tudo
   return (
-    // ProtectedRoute é o PRIMEIRO elemento retornado, envolvendo todo o resto
     <ProtectedRoute allowedRoles={[Role.ADMINISTRADOR]}>
-      {/* O conteúdo SÓ é renderizado se ProtectedRoute permitir */}
       <Card>
         <CardHeader>
           <CardTitle>Dashboard do Administrador</CardTitle>
@@ -100,13 +173,14 @@ export default function AdminDashboardPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Lógica de Loading/Error/Data agora dentro do conteúdo protegido */}
+          {/* Loading da Query */}
           {isQueryLoading && (
             <div className="flex justify-center items-center min-h-[300px]">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           )}
 
+          {/* Erro da Query */}
           {isError && (
             <div className="text-center p-4 text-destructive bg-destructive/10 rounded-md">
               Erro ao buscar solicitações:{' '}
@@ -114,6 +188,7 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
+          {/* Sem Dados */}
           {!isQueryLoading &&
             !isError &&
             (!requests || requests.length === 0) && (
@@ -122,6 +197,7 @@ export default function AdminDashboardPage() {
               </div>
             )}
 
+          {/* Tabela com Dados */}
           {!isQueryLoading && !isError && requests && requests.length > 0 && (
             <Table>
               <TableHeader>
@@ -178,7 +254,6 @@ export default function AdminDashboardPage() {
                     <TableCell>{formatDate(req.createdAt)}</TableCell>
                     <TableCell>
                       <DropdownMenu>
-                        {/* ... Dropdown ... */}
                         <DropdownMenuTrigger asChild>
                           <Button
                             aria-haspopup="true"
@@ -189,21 +264,32 @@ export default function AdminDashboardPage() {
                             <span className="sr-only">Abrir menu</span>
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          className="bg-neutral-900 "
-                        >
-                          <DropdownMenuLabel className="border-b">
-                            Ações
-                          </DropdownMenuLabel>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Ações</DropdownMenuLabel>
                           <DropdownMenuItem
-                            onClick={() => setEditingRequest(req)} // <-- Define qual request editar
-                            // onSelect={(e) => { e.preventDefault(); setEditingRequest(req)}} // Alternativa se onClick não funcionar bem em DropdownMenuItem
+                            onClick={() => setEditingRequest(req)}
                           >
                             Adicionar/Ver Observação
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            Marcar como Não Realizada
+                          {/* Item de Marcar como Não Realizada */}
+                          <DropdownMenuItem
+                            // Chama o handler CORRETO agora
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              handleMarkAsNotRealized(req.id);
+                            }}
+                            // Desabilita se já for NAO_REALIZADA ou se a mutação estiver rodando
+                            disabled={
+                              req.status === SwapStatus.NAO_REALIZADA ||
+                              markAsNotRealizedMutation.isPending
+                            }
+                            className="text-red-600 focus:bg-red-100 focus:text-red-700"
+                          >
+                            {/* Feedback de loading específico para esta mutação/linha */}
+                            {markAsNotRealizedMutation.isPending &&
+                            markAsNotRealizedMutation.variables === req.id
+                              ? 'Marcando...'
+                              : 'Marcar como Não Realizada'}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -215,10 +301,11 @@ export default function AdminDashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Renderização condicional do Dialog (inalterada) */}
       <ObservationDialog
-        request={editingRequest} // Passa a request a ser editada (ou null)
+        request={editingRequest}
         onOpenChange={(open) => {
-          // Se o dialog for fechado (pelo botão Cancelar ou clique fora), limpa o estado
           if (!open) {
             setEditingRequest(null);
           }
