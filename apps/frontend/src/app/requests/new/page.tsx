@@ -134,7 +134,6 @@ export default function NewRequestPage() {
       setEmployeeIdIn('');
       setSwapDate(undefined); /* ...etc */
       // Redirecionar para outra página?
-      router.push('/'); // Volta para home por enquanto
     },
     onError: (error) => {
       console.error('Erro ao criar solicitação:', error);
