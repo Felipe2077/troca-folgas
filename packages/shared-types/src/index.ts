@@ -60,4 +60,13 @@ export interface SwapRequest {
   // };
 }
 
-// Você pode exportar outros tipos compartilhados aqui no futuro
+export const DayOfWeek = {
+  SUNDAY: 'SUNDAY',
+  MONDAY: 'MONDAY',
+  TUESDAY: 'TUESDAY',
+  WEDNESDAY: 'WEDNESDAY',
+  THURSDAY: 'THURSDAY',
+  FRIDAY: 'FRIDAY',
+  SATURDAY: 'SATURDAY',
+} as const;
+export type DayOfWeek = (typeof DayOfWeek)[keyof typeof DayOfWeek];

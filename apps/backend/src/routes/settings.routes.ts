@@ -55,35 +55,32 @@ export async function settingsRoutes(fastify: FastifyInstance) {
       try {
         // Verificar Role (Só Admin pode atualizar)
         if (request.user.role !== Role.ADMINISTRADOR) {
-          return reply
-            .status(403)
-            .send({
-              message:
-                'Acesso negado. Apenas administradores podem atualizar configurações.',
-            });
+          return reply.status(403).send({
+            message:
+              'Acesso negado. Apenas administradores podem atualizar configurações.',
+          });
         }
 
         // Validar Corpo da Requisição
         const parseResult = settingsUpdateSchema.safeParse(request.body);
         if (!parseResult.success) {
-          return reply.status(400).send({
-            message: 'Dados inválidos.',
-            issues: parseResult.error.format(),
-          });
+          /* ... retorna erro 400 ... */
         }
         const validatedData = parseResult.data;
 
-        // Atualizar (ou criar se não existir) a linha de settings ID=1
+        // Atualizar (ou criar) a linha de settings ID=1
         const updatedSettings = await prisma.settings.upsert({
           where: { id: 1 },
           update: {
-            submissionDeadlineDays: validatedData.submissionDeadlineDays,
-            // Atualize outros campos aqui quando adicionados
+            // Usa os dados validados (que já são do tipo Enum do shared-types)
+            // Prisma aceita a string do Enum diretamente aqui se os nomes baterem
+            submissionStartDay: validatedData.submissionStartDay,
+            submissionEndDay: validatedData.submissionEndDay,
           },
           create: {
             id: 1,
-            submissionDeadlineDays: validatedData.submissionDeadlineDays,
-            // Adicione outros campos aqui quando adicionados
+            submissionStartDay: validatedData.submissionStartDay,
+            submissionEndDay: validatedData.submissionEndDay,
           },
         });
 

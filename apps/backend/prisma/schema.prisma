@@ -95,13 +95,22 @@ model AuditLog {
 }
 
 model Settings {
-  id                     Int      @id @default(1) // ID Fixo para garantir linha única
+  id                 Int       @id @default(1)
+  submissionStartDay DayOfWeek @default(MONDAY)    // Dia de início padrão
+  submissionEndDay   DayOfWeek @default(WEDNESDAY)  // Dia de fim padrão
 
-  submissionDeadlineDays Int      @default(7) // Nº de dias ANTES da troca para submeter (default: 7)
-  // Adicione outros campos de configuração aqui no futuro, se necessário
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+  @@map("settings")
+}
 
-  @@map("settings") // Mapeia para a tabela 'settings' no banco
+enum DayOfWeek {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
 }

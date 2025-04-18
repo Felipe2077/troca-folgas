@@ -1,5 +1,5 @@
 // apps/backend/prisma/seed.ts - VERSÃO COMPLETA E REVISADA
-import { PrismaClient, Role } from '@prisma/client';
+import { /*...,*/ DayOfWeek, PrismaClient, Role } from '@prisma/client';
 import { hash } from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -58,16 +58,22 @@ async function main() {
 
   // Cria/Atualiza a linha única de Settings (ID=1)
   try {
-    const settings = await prisma.settings.upsert({
+    await prisma.settings.upsert({
       where: { id: 1 },
-      update: {},
+      update: {
+        // Garante que valores padrão sejam aplicados se a linha já existir
+        submissionStartDay: DayOfWeek.MONDAY,
+        submissionEndDay: DayOfWeek.WEDNESDAY,
+      },
       create: {
         id: 1,
-        submissionDeadlineDays: 7,
+        submissionStartDay: DayOfWeek.MONDAY, // Usa valor do Enum
+        submissionEndDay: DayOfWeek.WEDNESDAY, // Usa valor do Enum
       },
     });
+    // Ajuste o console.log se quiser mostrar os dias
     console.log(
-      `Default settings created/ensured (ID: ${settings.id}, Deadline: ${settings.submissionDeadlineDays} days).`
+      `Default settings created/ensured (ID: 1, StartDay: ${DayOfWeek.MONDAY}, EndDay: ${DayOfWeek.WEDNESDAY}).`
     );
   } catch (error) {
     console.error('!!! Erro ao criar/atualizar Settings:', error);

@@ -1,5 +1,5 @@
 // apps/backend/src/routes/request.routes.ts
-import { Role, SwapEventType, SwapStatus } from '@prisma/client';
+import { DayOfWeek, Role, SwapEventType, SwapStatus } from '@prisma/client';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { getISOWeek } from 'date-fns'; // Helpers de data
 import { FastifyInstance } from 'fastify';
@@ -74,11 +74,9 @@ export async function requestRoutes(fastify: FastifyInstance) {
       } catch (error) {
         // Tratamento de erro continua igual
         fastify.log.error(error);
-        return reply
-          .status(500)
-          .send({
-            message: 'Erro interno do servidor ao buscar solicitações.',
-          });
+        return reply.status(500).send({
+          message: 'Erro interno do servidor ao buscar solicitações.',
+        });
       }
     }
   );
@@ -118,12 +116,74 @@ export async function requestRoutes(fastify: FastifyInstance) {
           });
         }
 
-        // 3.3: TODO - Verificar Janela de Submissão
-        // Comparar data atual com a data limite configurável pelo ADM
-        // (Implementaremos quando tivermos a configuração do ADM)
-        const isSubmissionWindowOk = true; // Placeholder
-        if (!isSubmissionWindowOk) {
-          // return reply.status(400).send({ message: 'Fora da janela de submissão.' });
+        // 3.3: Verificar Janela de Submissão
+        try {
+          const settings = await prisma.settings.findUniqueOrThrow({
+            where: { id: 1 },
+          }); // Busca config atual
+          const now = new Date();
+          const currentDayOfWeek = now.getDay(); // 0 = Domingo, 1 = Segunda, ..., 6 = Sábado (JS Date standard)
+
+          // Mapeia os Enums do Prisma para números 0-6
+          const dayMap: Record<DayOfWeek, number> = {
+            SUNDAY: 0,
+            MONDAY: 1,
+            TUESDAY: 2,
+            WEDNESDAY: 3,
+            THURSDAY: 4,
+            FRIDAY: 5,
+            SATURDAY: 6,
+          };
+          const startDayNum = dayMap[settings.submissionStartDay];
+          const endDayNum = dayMap[settings.submissionEndDay];
+
+          let isAllowed = false;
+          // Lógica para checar se currentDayOfWeek está entre startDayNum e endDayNum
+          // CUIDADO: Precisa tratar o caso em que a janela "vira a semana" (ex: Sexta a Segunda)
+          if (startDayNum <= endDayNum) {
+            // Caso normal (ex: Segunda a Quarta)
+            isAllowed =
+              currentDayOfWeek >= startDayNum && currentDayOfWeek <= endDayNum;
+          } else {
+            // Caso onde a janela vira a semana (ex: Sexta a Segunda)
+            // Está permitido se for >= Sexta OU <= Segunda
+            isAllowed =
+              currentDayOfWeek >= startDayNum || currentDayOfWeek <= endDayNum;
+          }
+
+          if (!isAllowed) {
+            // Encontra o próximo dia de início
+            const nextDayNum = startDayNum;
+            let daysToAdd = (startDayNum - currentDayOfWeek + 7) % 7;
+            if (daysToAdd === 0 && startDayNum !== currentDayOfWeek)
+              daysToAdd = 7; // Ajuste se for o mesmo dia mas já passou? (simplificado)
+
+            const daysOfWeekNames = [
+              'Domingo',
+              'Segunda-feira',
+              'Terça-feira',
+              'Quarta-feira',
+              'Quinta-feira',
+              'Sexta-feira',
+              'Sábado',
+            ];
+            const nextDayName = daysOfWeekNames[nextDayNum];
+
+            return reply
+              .status(400)
+              .send({
+                message: `Fora do período de submissão. A janela abre na próxima ${nextDayName}.`,
+              });
+          }
+        } catch (settingsError) {
+          fastify.log.error(
+            'Erro ao buscar configurações para validar janela de submissão:',
+            settingsError
+          );
+          // Decide se bloqueia ou permite em caso de erro ao buscar config? Por segurança, bloquear.
+          return reply
+            .status(500)
+            .send({ message: 'Erro ao verificar período de submissão.' });
         }
 
         // 4. Calcular eventType (Troca ou Substituição)
