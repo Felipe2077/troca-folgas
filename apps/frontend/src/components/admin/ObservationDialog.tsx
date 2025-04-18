@@ -35,28 +35,41 @@ async function updateObservationApi({
   observation,
   token,
 }: UpdateObservationParams): Promise<SwapRequest> {
-  const response = await fetch(
-    `<span class="math-inline">\{process\.env\.NEXT\_PUBLIC\_API\_URL\}/api/requests/</span>{requestId}`,
-    {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        observation: observation === '' ? null : observation,
-      }), // Envia null se string vazia
-    }
+  // Log para verificar se o parâmetro foi recebido
+  console.log(
+    '>>> updateObservationApi received - requestId:',
+    requestId,
+    'observation:',
+    observation,
+    'token exists:',
+    !!token
   );
+
+  // Monta a URL e loga antes do fetch
+  const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/requests/${requestId}`;
+
+  // Tenta o fetch
+  const response = await fetch(apiUrl, {
+    // Usa a variável apiUrl
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      observation: observation === '' ? null : observation,
+    }),
+  });
 
   if (!response.ok) {
     const errorData = await response
       .json()
       .catch(() => ({ message: `Erro ${response.status}` }));
+    console.error('>>> updateObservationApi - Fetch error:', errorData); // Loga o erro antes de lançar
     throw new Error(errorData.message || 'Falha ao atualizar observação.');
   }
   const data = await response.json();
-  return data.request; // Assume que API retorna { request: SwapRequest }
+  return data.request;
 }
 
 export function ObservationDialog({

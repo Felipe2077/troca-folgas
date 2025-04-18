@@ -61,10 +61,6 @@ await app.register(cors, {
 await app.register(authRoutes, { prefix: '/api/auth' });
 await app.register(requestRoutes, { prefix: '/api/requests' });
 
-console.log('--- Registered Routes ---');
-console.log(app.printRoutes()); // Pede ao Fastify para listar as rotas
-console.log('-----------------------');
-
 // ----- INICIALIZAÇÃO DO SERVIDOR -----
 const start = async () => {
   try {

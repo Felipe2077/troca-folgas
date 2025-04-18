@@ -200,7 +200,6 @@ export async function requestRoutes(fastify: FastifyInstance) {
         // Tratamento de Erro Específico do Prisma (Ex: ID não encontrado)
         if (error instanceof PrismaClientKnownRequestError) {
           if (error.code === 'P2025') {
-            // Código para 'Record to update not found.'
             return reply
               .status(404)
               .send({ message: 'Solicitação não encontrada.' });
