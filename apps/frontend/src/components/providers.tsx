@@ -2,6 +2,7 @@
 'use client'; // Provider precisa ser client component se instanciar client aqui
 
 import { ThemeProvider } from '@/components/theme-provider'; // Nosso provider de tema
+import { AuthProvider } from '@/contexts/AuthProvider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
@@ -27,7 +28,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
         enableSystem
         disableTransitionOnChange
       >
-        {children}
+        <AuthProvider>
+          <QueryClientProvider client={queryClient}>
+            {children} {/* O resto da aplicação fica aqui dentro */}
+          </QueryClientProvider>
+        </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

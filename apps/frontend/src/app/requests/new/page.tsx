@@ -1,18 +1,14 @@
 // apps/frontend/src/app/requests/new/page.tsx
 'use client';
 
-import { cn } from '@/lib/utils';
 import { useMutation } from '@tanstack/react-query'; // Importar useMutation
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import * as React from 'react';
 import { useState } from 'react';
 
 // Importa componentes Shadcn/ui
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'; // Importa nosso guardião
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
 import {
   Card,
   CardContent,
@@ -21,13 +17,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { DatePicker } from '@/components/ui/datepicker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -35,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Role } from '@repo/shared-types'; // Importa o Enum Role compartilhado
 
 // Tipos (Enum podem ser substituídos por string se não vierem de pacote compartilhado)
 const employeeFunctionOptions = ['MOTORISTA', 'COBRADOR'] as const;
@@ -78,41 +71,7 @@ interface ApiError {
 }
 
 // --- Componente DatePicker (inalterado) ---
-interface DatePickerProps {
-  date: Date | undefined;
-  setDate: (date: Date | undefined) => void;
-}
-function DatePicker({ date, setDate }: DatePickerProps) {
-  /* ... código do DatePicker ... */
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant={'outline'}
-          className={cn(
-            'w-full justify-start text-left font-normal',
-            !date && 'text-muted-foreground'
-          )}
-        >
-          <CalendarIcon className="mr-2 h-4 w-4" />{' '}
-          {date ? (
-            format(date, 'PPP', { locale: ptBR })
-          ) : (
-            <span>Escolha uma data</span>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
-        <Calendar
-          mode="single"
-          selected={date}
-          onSelect={setDate}
-          initialFocus
-        />
-      </PopoverContent>
-    </Popover>
-  );
-}
+
 // --- Fim do Componente DatePicker ---
 
 // --- Componente Principal da Página ---
@@ -228,161 +187,163 @@ export default function NewRequestPage() {
   };
 
   return (
-    <div className="flex justify-center pt-10">
-      <Card className="w-full max-w-2xl">
-        <CardHeader>
-          <CardTitle>Nova Solicitação de Troca/Substituição</CardTitle>
-          <CardDescription>
-            Preencha os dados abaixo para registrar a troca ou substituição de
-            folga.
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Mensagem de erro da API */}
-            {apiError && (
-              <p className="md:col-span-2 text-sm font-medium text-destructive bg-destructive/10 p-3 rounded-md">
-                Erro: {apiError}
-              </p>
-            )}
+    <ProtectedRoute allowedRoles={[Role.ENCARREGADO]}>
+      <div className="flex justify-center pt-10">
+        <Card className="w-full max-w-2xl">
+          <CardHeader>
+            <CardTitle>Nova Solicitação de Troca/Substituição</CardTitle>
+            <CardDescription>
+              Preencha os dados abaixo para registrar a troca ou substituição de
+              folga.
+            </CardDescription>
+          </CardHeader>
+          <form onSubmit={handleSubmit}>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Mensagem de erro da API */}
+              {apiError && (
+                <p className="md:col-span-2 text-sm font-medium text-destructive bg-destructive/10 p-3 rounded-md">
+                  Erro: {apiError}
+                </p>
+              )}
 
-            {/* Coluna 1 */}
-            <div className="space-y-4">
-              {/* ... Input employeeIdOut (com value/onChange e disabled={mutation.isPending}) ... */}
-              <div className="grid gap-2">
-                <Label htmlFor="employeeIdOut">
-                  Funcionário de Saída (Crachá)
-                </Label>
-                <Input
-                  id="employeeIdOut"
-                  placeholder="Apenas números"
-                  required
-                  value={employeeIdOut}
-                  type="tel"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setEmployeeIdOut(v.replace(/[^0-9]/g, ''));
-                  }}
-                  disabled={mutation.isPending}
-                />
+              {/* Coluna 1 */}
+              <div className="space-y-4">
+                {/* ... Input employeeIdOut (com value/onChange e disabled={mutation.isPending}) ... */}
+                <div className="grid gap-2">
+                  <Label htmlFor="employeeIdOut">
+                    Funcionário de Saída (Crachá)
+                  </Label>
+                  <Input
+                    id="employeeIdOut"
+                    placeholder="Apenas números"
+                    required
+                    value={employeeIdOut}
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setEmployeeIdOut(v.replace(/[^0-9]/g, ''));
+                    }}
+                    disabled={mutation.isPending}
+                  />
+                </div>
+                {/* ... DatePicker swapDate (com date/setDate e talvez disabled?) ... */}
+                <div className="grid gap-2">
+                  <Label htmlFor="swapDate">
+                    Data da Troca (Trabalho do Colega)
+                  </Label>
+                  <DatePicker date={swapDate} setDate={setSwapDate} />
+                </div>
+                {/* ... Select groupOut (com value/onValueChange e disabled={mutation.isPending}) ... */}
+                <div className="grid gap-2">
+                  <Label htmlFor="groupOut">Grupo de Folga (Saída)</Label>
+                  <Select
+                    value={groupOut}
+                    onValueChange={(value: ReliefGroup) => setGroupOut(value)}
+                    required
+                    disabled={mutation.isPending}
+                  >
+                    <SelectTrigger id="groupOut">
+                      <SelectValue placeholder="Selecione o grupo de quem vai folgar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {reliefGroupOptions.map((group) => (
+                        <SelectItem key={group} value={group}>
+                          {group}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              {/* ... DatePicker swapDate (com date/setDate e talvez disabled?) ... */}
-              <div className="grid gap-2">
-                <Label htmlFor="swapDate">
-                  Data da Troca (Trabalho do Colega)
-                </Label>
-                <DatePicker date={swapDate} setDate={setSwapDate} />
+
+              {/* Coluna 2 */}
+              <div className="space-y-4">
+                {/* ... Input employeeIdIn (com value/onChange e disabled={mutation.isPending}) ... */}
+                <div className="grid gap-2">
+                  <Label htmlFor="employeeIdIn">
+                    Funcionário de Entrada (Crachá)
+                  </Label>
+                  <Input
+                    id="employeeIdIn"
+                    placeholder="Apenas números"
+                    required
+                    value={employeeIdIn}
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setEmployeeIdIn(v.replace(/[^0-9]/g, ''));
+                    }}
+                    disabled={mutation.isPending}
+                  />
+                </div>
+                {/* ... DatePicker paybackDate (com date/setDate e talvez disabled?) ... */}
+                <div className="grid gap-2">
+                  <Label htmlFor="paybackDate">
+                    Data do Pagamento (Retorno da Folga)
+                  </Label>
+                  <DatePicker date={paybackDate} setDate={setPaybackDate} />
+                </div>
+                {/* ... Select groupIn (com value/onValueChange e disabled={mutation.isPending}) ... */}
+                <div className="grid gap-2">
+                  <Label htmlFor="groupIn">Grupo de Folga (Entrada)</Label>
+                  <Select
+                    value={groupIn}
+                    onValueChange={(value: ReliefGroup) => setGroupIn(value)}
+                    required
+                    disabled={mutation.isPending}
+                  >
+                    <SelectTrigger id="groupIn">
+                      <SelectValue placeholder="Selecione o grupo de quem vai cobrir" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {reliefGroupOptions.map((group) => (
+                        <SelectItem key={group} value={group}>
+                          {group}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              {/* ... Select groupOut (com value/onValueChange e disabled={mutation.isPending}) ... */}
-              <div className="grid gap-2">
-                <Label htmlFor="groupOut">Grupo de Folga (Saída)</Label>
+
+              {/* Campo Função */}
+              <div className="grid gap-2 md:col-span-2">
+                <Label htmlFor="employeeFunction">Função</Label>
+                {/* ... Select employeeFunction (com value/onValueChange e disabled={mutation.isPending}) ... */}
                 <Select
-                  value={groupOut}
-                  onValueChange={(value: ReliefGroup) => setGroupOut(value)}
+                  value={employeeFunction}
+                  onValueChange={(value: EmployeeFunction) =>
+                    setEmployeeFunction(value)
+                  }
                   required
                   disabled={mutation.isPending}
                 >
-                  <SelectTrigger id="groupOut">
-                    <SelectValue placeholder="Selecione o grupo de quem vai folgar" />
+                  <SelectTrigger id="employeeFunction">
+                    <SelectValue placeholder="Selecione a função" />
                   </SelectTrigger>
                   <SelectContent>
-                    {reliefGroupOptions.map((group) => (
-                      <SelectItem key={group} value={group}>
-                        {group}
+                    {employeeFunctionOptions.map((func) => (
+                      <SelectItem key={func} value={func}>
+                        {func}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            {/* Coluna 2 */}
-            <div className="space-y-4">
-              {/* ... Input employeeIdIn (com value/onChange e disabled={mutation.isPending}) ... */}
-              <div className="grid gap-2">
-                <Label htmlFor="employeeIdIn">
-                  Funcionário de Entrada (Crachá)
-                </Label>
-                <Input
-                  id="employeeIdIn"
-                  placeholder="Apenas números"
-                  required
-                  value={employeeIdIn}
-                  type="tel"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setEmployeeIdIn(v.replace(/[^0-9]/g, ''));
-                  }}
-                  disabled={mutation.isPending}
-                />
-              </div>
-              {/* ... DatePicker paybackDate (com date/setDate e talvez disabled?) ... */}
-              <div className="grid gap-2">
-                <Label htmlFor="paybackDate">
-                  Data do Pagamento (Retorno da Folga)
-                </Label>
-                <DatePicker date={paybackDate} setDate={setPaybackDate} />
-              </div>
-              {/* ... Select groupIn (com value/onValueChange e disabled={mutation.isPending}) ... */}
-              <div className="grid gap-2">
-                <Label htmlFor="groupIn">Grupo de Folga (Entrada)</Label>
-                <Select
-                  value={groupIn}
-                  onValueChange={(value: ReliefGroup) => setGroupIn(value)}
-                  required
-                  disabled={mutation.isPending}
-                >
-                  <SelectTrigger id="groupIn">
-                    <SelectValue placeholder="Selecione o grupo de quem vai cobrir" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {reliefGroupOptions.map((group) => (
-                      <SelectItem key={group} value={group}>
-                        {group}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Campo Função */}
-            <div className="grid gap-2 md:col-span-2">
-              <Label htmlFor="employeeFunction">Função</Label>
-              {/* ... Select employeeFunction (com value/onValueChange e disabled={mutation.isPending}) ... */}
-              <Select
-                value={employeeFunction}
-                onValueChange={(value: EmployeeFunction) =>
-                  setEmployeeFunction(value)
-                }
-                required
-                disabled={mutation.isPending}
-              >
-                <SelectTrigger id="employeeFunction">
-                  <SelectValue placeholder="Selecione a função" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employeeFunctionOptions.map((func) => (
-                    <SelectItem key={func} value={func}>
-                      {func}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button className="w-full" type="submit" disabled={isDisabled}>
-              {/* Mostra feedback de loading no botão */}
-              {mutation.isPending ? 'Enviando...' : 'Enviar Solicitação'}
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
-    </div>
+            </CardContent>
+            <CardFooter>
+              <Button className="w-full" type="submit" disabled={isDisabled}>
+                {/* Mostra feedback de loading no botão */}
+                {mutation.isPending ? 'Enviando...' : 'Enviar Solicitação'}
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
+      </div>
+    </ProtectedRoute>
   );
 }
