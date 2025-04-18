@@ -8,6 +8,7 @@ import { authenticate } from '../hooks/authenticate.hook.js'; // Nosso hook de a
 import { prisma } from '../lib/prisma.js';
 import {
   requestIdParamsSchema,
+  requestListQuerySchema,
   requestUpdateObservationBodySchema,
   swapRequestCreateBodySchema,
 } from '../schemas/request.schema.js'; // Nosso schema Zod
@@ -36,35 +37,49 @@ export async function requestRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        // 1. Verificar Role do Usuário (ADMINISTRADOR) - Vem do payload do JWT
+        // 1. Verificar Role (continua igual)
         if (request.user.role !== Role.ADMINISTRADOR) {
           return reply.status(403).send({
-            message:
-              'Acesso negado. Apenas administradores podem listar todas as solicitações.',
+            /* ... */
           });
         }
 
-        // 2. Buscar todas as solicitações no banco de dados
+        // 2. Validar Query Parameters (NOVO)
+        const queryParse = requestListQuerySchema.safeParse(request.query);
+        if (!queryParse.success) {
+          return reply.status(400).send({
+            message: 'Parâmetros de query inválidos.',
+            issues: queryParse.error.format(),
+          });
+        }
+        // Pega o status validado (será undefined se não foi passado ou inválido)
+        const { status: statusFilter } = queryParse.data;
+
+        // 3. Construir Cláusula Where do Prisma Condicionalmente (NOVO)
+        const whereClause: { status?: SwapStatus } = {}; // Começa vazio
+        if (statusFilter) {
+          whereClause.status = statusFilter; // Adiciona filtro SÓ se status foi passado
+        }
+
+        // 4. Buscar Solicitações no Banco com o Filtro (MODIFICADO)
         const requests = await prisma.swapRequest.findMany({
-          // Opcional: Ordenar as mais recentes primeiro
+          where: whereClause, // <--- USA A CLÁUSULA WHERE
           orderBy: {
             createdAt: 'desc',
           },
-          // Opcional: Incluir dados do usuário que submeteu
-          // include: {
-          //   submittedBy: {
-          //     select: { id: true, name: true }
-          //   }
-          // }
+          // include: { ... } // Se quiser incluir dados do usuário
         });
 
-        // 3. Retornar a lista de solicitações
+        // 5. Retornar a lista (filtrada ou não)
         return reply.status(200).send({ requests });
       } catch (error) {
-        fastify.log.error(error); // Loga o erro no console do servidor
-        return reply.status(500).send({
-          message: 'Erro interno do servidor ao buscar solicitações.',
-        });
+        // Tratamento de erro continua igual
+        fastify.log.error(error);
+        return reply
+          .status(500)
+          .send({
+            message: 'Erro interno do servidor ao buscar solicitações.',
+          });
       }
     }
   );
@@ -230,12 +245,10 @@ export async function requestRoutes(fastify: FastifyInstance) {
       try {
         // 1. Verificar Role (Só Admin pode fazer isso)
         if (request.user.role !== Role.ADMINISTRADOR) {
-          return reply
-            .status(403)
-            .send({
-              message:
-                'Acesso negado. Apenas administradores podem alterar o status.',
-            });
+          return reply.status(403).send({
+            message:
+              'Acesso negado. Apenas administradores podem alterar o status.',
+          });
         }
 
         // 2. Validar Parâmetro da Rota (ID)

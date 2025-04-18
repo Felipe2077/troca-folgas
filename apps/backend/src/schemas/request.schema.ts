@@ -1,7 +1,7 @@
 // apps/backend/src/schemas/request.schema.ts
 import { z } from 'zod';
 // Importa os Enums definidos no schema.prisma
-import { EmployeeFunction, ReliefGroup } from '@prisma/client';
+import { EmployeeFunction, ReliefGroup, SwapStatus } from '@prisma/client';
 
 // Schema para validar o corpo da requisição ao criar uma SwapRequest
 export const swapRequestCreateBodySchema = z.object({
@@ -51,4 +51,14 @@ export const requestIdParamsSchema = z.object({
 // Schema para validar o corpo da requisição de atualização de observação
 export const requestUpdateObservationBodySchema = z.object({
   observation: z.string().nullable(),
+});
+
+// Schema para validar os query parameters da rota GET /requests
+export const requestListQuerySchema = z.object({
+  // Status é opcional. Se vier, deve ser um dos valores do Enum SwapStatus.
+  status: z.nativeEnum(SwapStatus).optional(),
+  // Poderíamos adicionar outros filtros aqui depois (data, func, etc.)
+  // funcionarioId: z.coerce.number().int().positive().optional(),
+  // startDate: z.coerce.date().optional(),
+  // endDate: z.coerce.date().optional(),
 });
