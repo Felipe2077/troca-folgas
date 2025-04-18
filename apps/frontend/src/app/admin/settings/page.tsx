@@ -1,4 +1,4 @@
-// apps/frontend/src/app/admin/settings/page.tsx
+// apps/frontend/src/app/admin/settings/page.tsx - Import CORRIGIDO
 'use client';
 
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -11,21 +11,23 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/contexts/AuthContext'; // Para pegar token
-import { Role, Settings } from '@repo/shared-types'; // Importa tipos
+import { useAuth } from '@/contexts/AuthContext';
+// ***** CORRIGIDO O IMPORT DO SELECT *****
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'; // <-- CORRIGIDO: Importa do Shadcn UI local
+// ***** FIM DA CORREÇÃO *****
+import { DayOfWeek, Role, Settings } from '@repo/shared-types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
-import { FormEvent, useEffect, useState } from 'react'; // Import FormEvent
+import { FormEvent, useEffect, useState } from 'react'; // Importa FormEvent e React
 
-// --- Tipo para os dados do formulário ---
-interface SettingsFormData {
-  submissionDeadlineDays: number;
-  // Adicionar outros campos aqui no futuro
-}
-
-// --- Função para BUSCAR Settings ---
+// --- Funções de API Call ---
 async function fetchSettings(token: string | null): Promise<Settings> {
   if (!token) {
     throw new Error('Token não encontrado para buscar configurações.');
@@ -49,11 +51,15 @@ async function fetchSettings(token: string | null): Promise<Settings> {
   return data.settings;
 }
 
-// --- Função para ATUALIZAR Settings ---
+interface SettingsFormData {
+  submissionStartDay: DayOfWeek;
+  submissionEndDay: DayOfWeek;
+}
 interface UpdateSettingsParams {
   settingsData: SettingsFormData;
   token: string | null;
 }
+
 async function updateSettingsApi({
   settingsData,
   token,
@@ -64,7 +70,7 @@ async function updateSettingsApi({
   const response = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL}/api/settings`,
     {
-      method: 'PUT', // Usando PUT para substituir as configurações
+      method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
@@ -86,15 +92,12 @@ async function updateSettingsApi({
 
 // --- Componente da Página ---
 export default function SettingsPage() {
-  const { token } = useAuth(); // Pega o token do contexto para as chamadas API
+  const { token } = useAuth();
   const queryClient = useQueryClient();
+  const [startDay, setStartDay] = useState<DayOfWeek | undefined>(undefined);
+  const [endDay, setEndDay] = useState<DayOfWeek | undefined>(undefined);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  // Estado local para o valor do input (controlado)
-  // Iniciamos com string vazia, pois o input type number às vezes lida melhor
-  const [deadlineDays, setDeadlineDays] = useState<string>('');
-  const [formError, setFormError] = useState<string | null>(null); // Para erros de validação local
-
-  // Query para buscar as configurações atuais
   const {
     data: currentSettings,
     isLoading: isLoadingSettings,
@@ -103,105 +106,111 @@ export default function SettingsPage() {
   } = useQuery<Settings, Error>({
     queryKey: ['settings'],
     queryFn: () => fetchSettings(token),
-    enabled: !!token, // Só roda se tiver token
-    staleTime: 5 * 60 * 1000, // Cache por 5 min
+    enabled: !!token,
+    staleTime: 5 * 60 * 1000,
   });
 
-  // Efeito para preencher o input quando os dados da query chegarem/mudarem
   useEffect(() => {
     if (currentSettings) {
-      setDeadlineDays(String(currentSettings.submissionDeadlineDays)); // Popula o estado local
+      setStartDay(currentSettings.submissionStartDay);
+      setEndDay(currentSettings.submissionEndDay);
     }
   }, [currentSettings]);
 
-  // Mutação para salvar as configurações
   const updateSettingsMutation = useMutation<Settings, Error, SettingsFormData>(
     {
       mutationFn: (newSettingsData) =>
         updateSettingsApi({ settingsData: newSettingsData, token }),
       onSuccess: (updatedSettings) => {
         console.log('Configurações salvas:', updatedSettings);
-        // Atualiza o cache do useQuery localmente com os dados novos para UI instantânea
         queryClient.setQueryData(['settings'], updatedSettings);
-        // OU poderia invalidar para refetch: queryClient.invalidateQueries({ queryKey: ['settings'] });
         alert('Configurações salvas com sucesso!');
-        setFormError(null); // Limpa erro anterior
+        setFormError(null);
       },
       onError: (error) => {
         console.error('Erro ao salvar configurações:', error);
-        setFormError(error.message); // Guarda erro para exibir
-        // alert(`Erro ao salvar: ${error.message}`); // Pode remover o alert se exibir o erro
+        setFormError(error.message);
       },
     }
   );
 
-  // Handler para o submit do formulário
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setFormError(null);
-
-    // Validação local simples antes de enviar
-    const days = parseInt(deadlineDays, 10);
-    if (isNaN(days) || days < 0 || !Number.isInteger(days)) {
-      // Verifica se é inteiro não negativo
-      setFormError(
-        'Prazo inválido. Por favor, insira um número inteiro igual ou maior que zero.'
-      );
+    if (!startDay || !endDay) {
+      setFormError('Por favor, selecione os dias de início e fim.');
       return;
     }
-
     const formData: SettingsFormData = {
-      submissionDeadlineDays: days,
-      // Adicione outros campos aqui no futuro
+      submissionStartDay: startDay,
+      submissionEndDay: endDay,
     };
-
-    // Dispara a mutação
     updateSettingsMutation.mutate(formData);
   };
 
   return (
     <ProtectedRoute allowedRoles={[Role.ADMINISTRADOR]}>
       <Card className="w-full max-w-lg mx-auto">
-        {' '}
-        {/* Centraliza card */}
         <CardHeader>
           <CardTitle>Configurações do Sistema</CardTitle>
           <CardDescription>
             Ajuste os parâmetros de funcionamento da aplicação.
           </CardDescription>
         </CardHeader>
-        {/* Só renderiza o formulário após carregar as configs */}
         {!isLoadingSettings && !isSettingsError && currentSettings && (
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
-              <div className="grid gap-2">
-                <Label htmlFor="deadlineDays">
-                  Prazo Limite para Submissão (dias antes da troca)
-                </Label>
-                <Input
-                  id="deadlineDays"
-                  type="number"
-                  min="0"
-                  step="1"
-                  required
-                  value={deadlineDays} // Controlado pelo estado
-                  onChange={(e) => setDeadlineDays(e.target.value)} // Atualiza estado string
-                  disabled={updateSettingsMutation.isPending} // Desabilita durante save
-                  className="w-24" // Largura menor
-                />
-                <p className="text-sm text-muted-foreground">
-                  Número de dias de antecedência que uma solicitação pode ser
-                  feita antes da data da troca. Ex: 7 significa até 7 dias
-                  antes.
-                </p>
-                {/* Exibe erro de validação/submissão do formulário */}
-                {formError && (
-                  <p className="text-sm font-medium text-destructive">
-                    {formError}
-                  </p>
-                )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="startDay">Dia de Início da Janela</Label>
+                  <Select
+                    value={startDay}
+                    onValueChange={(value: DayOfWeek) => setStartDay(value)}
+                    disabled={updateSettingsMutation.isPending}
+                    required
+                  >
+                    <SelectTrigger id="startDay">
+                      <SelectValue placeholder="Selecione o dia inicial" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(DayOfWeek).map(([key, value]) => (
+                        <SelectItem key={key} value={value}>
+                          {key}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="endDay">Dia Final da Janela</Label>
+                  <Select
+                    value={endDay}
+                    onValueChange={(value: DayOfWeek) => setEndDay(value)}
+                    disabled={updateSettingsMutation.isPending}
+                    required
+                  >
+                    <SelectTrigger id="endDay">
+                      <SelectValue placeholder="Selecione o dia final" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(DayOfWeek).map(([key, value]) => (
+                        <SelectItem key={key} value={value}>
+                          {key}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              {/* FUTURO: Adicionar outros campos de configuração aqui */}
+              <p className="text-sm text-muted-foreground md:col-span-2">
+                Período da semana em que os encarregados podem submeter novas
+                solicitações.
+              </p>
+              {formError && (
+                <p className="text-sm font-medium text-destructive">
+                  {formError}
+                </p>
+              )}
             </CardContent>
             <CardFooter>
               <Button type="submit" disabled={updateSettingsMutation.isPending}>
@@ -218,7 +227,6 @@ export default function SettingsPage() {
             </CardFooter>
           </form>
         )}
-        {/* Indicador de Loading enquanto busca configurações iniciais */}
         {isLoadingSettings && (
           <CardContent>
             <div className="flex justify-center items-center py-4">
@@ -226,7 +234,6 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         )}
-        {/* Indicador de Erro ao buscar configurações iniciais */}
         {isSettingsError && !isLoadingSettings && (
           <CardContent>
             <p className="text-sm font-medium text-destructive">
