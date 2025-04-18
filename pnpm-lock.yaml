@@ -71,6 +71,9 @@ importers:
       '@prisma/client':
         specifier: ^6.6.0
         version: 6.6.0(prisma@6.6.0(typescript@5.8.3))(typescript@5.8.3)
+      '@repo/shared-types':
+        specifier: workspace:^
+        version: link:../../packages/shared-types
       bcryptjs:
         specifier: ^3.0.2
         version: 3.0.2
@@ -123,6 +126,9 @@ importers:
       '@radix-ui/react-slot':
         specifier: ^1.2.0
         version: 1.2.0(@types/react@19.1.2)(react@19.1.0)
+      '@repo/shared-types':
+        specifier: workspace:^
+        version: link:../../packages/shared-types
       '@tanstack/react-query':
         specifier: ^5.74.4
         version: 5.74.4(react@19.1.0)
@@ -186,6 +192,15 @@ importers:
         version: 4.1.4
       typescript:
         specifier: ^5
+        version: 5.8.3
+
+  packages/shared-types:
+    devDependencies:
+      '@tsconfig/node20':
+        specifier: ^20.1.4
+        version: 20.1.5
+      typescript:
+        specifier: ^5.5.4
         version: 5.8.3
 
 packages:

@@ -74,9 +74,6 @@ const dummyRequests = [
   },
 ];
 
-// --- Tipagem (poderia vir de um pacote compartilhado) ---
-type _SwapRequestType = (typeof dummyRequests)[0];
-
 // --- Função Helper para Formatar Data (pode mover para /lib/utils.ts) ---
 const formatDate = (date: Date | null | undefined) => {
   if (!date) return '-';

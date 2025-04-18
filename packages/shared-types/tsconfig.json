@@ -1,0 +1,18 @@
+// packages/shared-types/tsconfig.json
+{
+  "extends": "@tsconfig/node20/tsconfig.json", // Herda de uma base
+  "compilerOptions": {
+    "outDir": "./dist", // Pasta de saída para JS e .d.ts
+    "rootDir": "./src", // Pasta de entrada com código TS
+    "declaration": true, // Gera arquivos .d.ts (essencial!)
+    "declarationMap": true, // Gera source maps para os .d.ts
+    "sourceMap": true, // Gera source maps para o JS
+    "module": "NodeNext", // Usa módulos ES modernos
+    "moduleResolution": "NodeNext", // Resolução moderna compatível com ESM
+    "isolatedModules": true, // Boa prática para transpilação
+    "skipLibCheck": true // Pula checagem de tipos em libs de terceiros
+    // "composite": true // Pode ser útil para project references depois
+  },
+  "include": ["src/**/*"], // Inclui todos os arquivos TS da pasta src
+  "exclude": ["node_modules", "dist"] // Exclui pastas
+}
