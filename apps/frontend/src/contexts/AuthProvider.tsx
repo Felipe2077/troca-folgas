@@ -1,7 +1,6 @@
 // apps/frontend/src/contexts/AuthProvider.tsx - VERSÃO CORRIGIDA E COMPLETA
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { AuthContext, AuthUser, LoginCredentials } from './AuthContext'; // Importa contexto e tipos
 
@@ -13,7 +12,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setTokenState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const router = useRouter();
 
   const setToken = useCallback((newToken: string | null) => {
     setTokenState(newToken);
@@ -69,11 +67,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [setToken]);
 
   const logout = useCallback(() => {
+    console.log('[AuthProvider] Logging out...');
     setUser(null);
-    setToken(null);
-    router.push('/login');
-    console.log('Usuário deslogado.');
-  }, [router, setToken]);
+    setToken(null); // setToken já limpa o localStorage
+    console.log(
+      '[AuthProvider] State cleared. Redirect will be handled by component reaction.'
+    );
+  }, [setToken]);
 
   const login = useCallback(
     async (credentials: LoginCredentials): Promise<AuthUser> => {
@@ -152,11 +152,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       user,
       token,
       setToken,
-      login, // <-- Agora 'login' existe e é passado aqui
+      login,
       logout,
     }),
     [isLoading, user, token, setToken, login, logout]
-  ); // <-- E aqui
+  );
 
   return (
     <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
