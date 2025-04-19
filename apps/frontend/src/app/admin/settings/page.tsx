@@ -27,6 +27,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import { FormEvent, useEffect, useState } from 'react'; // Importa FormEvent e React
 import { toast } from 'sonner';
+import { z } from 'zod';
 
 const dayOfWeekPortuguese: Record<DayOfWeek, string> = {
   SUNDAY: 'Domingo',
@@ -77,6 +78,7 @@ interface SettingsFormData {
   submissionStartDay: DayOfWeek;
   submissionEndDay: DayOfWeek;
 }
+type FormattedErrors = z.ZodFormattedError<SettingsFormData> | null;
 interface UpdateSettingsParams {
   settingsData: SettingsFormData;
   token: string | null;
@@ -120,6 +122,9 @@ export default function SettingsPage() {
   const [endDay, setEndDay] = useState<DayOfWeek | undefined>(undefined);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const [validationErrors, setValidationErrors] =
+    useState<FormattedErrors>(null);
+
   const {
     data: currentSettings,
     isLoading: isLoadingSettings,
@@ -134,8 +139,13 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (currentSettings) {
+      console.log('[useEffect] currentSettings received:', currentSettings); // LOG 1
       setStartDay(currentSettings.submissionStartDay);
       setEndDay(currentSettings.submissionEndDay);
+      console.log('[useEffect] Setting state to:', {
+        start: currentSettings.submissionStartDay,
+        end: currentSettings.submissionEndDay,
+      }); // LOG 2
     }
   }, [currentSettings]);
 
@@ -170,6 +180,8 @@ export default function SettingsPage() {
     updateSettingsMutation.mutate(formData);
   };
 
+  console.log('[Render] Current state values:', { startDay, endDay }); // LOG 3
+
   return (
     <ProtectedRoute allowedRoles={[Role.ADMINISTRADOR]}>
       <Card className="w-full max-w-lg mx-auto">
@@ -187,7 +199,14 @@ export default function SettingsPage() {
                   <Label htmlFor="startDay">Dia de Início da Janela</Label>
                   <Select
                     value={startDay}
-                    onValueChange={(value: DayOfWeek) => setStartDay(value)}
+                    onValueChange={(value: DayOfWeek) => {
+                      // ADICIONE ESTE LOG:
+                      console.log(
+                        `!!! onValueChange startDay triggered. Received value: '${value}' (type: ${typeof value})`
+                      );
+                      setStartDay(value);
+                      setValidationErrors(null); // Mantém limpeza de erro
+                    }}
                     disabled={updateSettingsMutation.isPending}
                     required
                   >
@@ -203,12 +222,24 @@ export default function SettingsPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {validationErrors?.submissionStartDay?._errors?.[0] && (
+                    <p className="text-sm font-medium text-destructive">
+                      {validationErrors.submissionStartDay._errors[0]}
+                    </p>
+                  )}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="endDay">Dia Final da Janela</Label>
                   <Select
                     value={endDay}
-                    onValueChange={(value: DayOfWeek) => setEndDay(value)}
+                    onValueChange={(value: DayOfWeek) => {
+                      // ADICIONE ESTE LOG:
+                      console.log(
+                        `!!! onValueChange endDay triggered. Received value: '${value}' (type: ${typeof value})`
+                      );
+                      setEndDay(value);
+                      setValidationErrors(null); // Mantém limpeza de erro
+                    }}
                     disabled={updateSettingsMutation.isPending}
                     required
                   >
@@ -224,6 +255,11 @@ export default function SettingsPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {validationErrors?.submissionEndDay?._errors?.[0] && (
+                    <p className="text-sm font-medium text-destructive">
+                      {validationErrors.submissionEndDay._errors[0]}
+                    </p>
+                  )}
                 </div>
               </div>
               <p className="text-sm text-muted-foreground md:col-span-2">
