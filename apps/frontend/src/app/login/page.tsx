@@ -1,4 +1,4 @@
-// apps/frontend/src/app/login/page.tsx - REATORADO COM AUTH CONTEXT
+// apps/frontend/src/app/login/page.tsx - COM VALIDAÇÃO ZOD E DISPLAY DE ERRO
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -12,63 +12,66 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/contexts/AuthContext'; // <-- Importa useAuth
-import { Role } from '@repo/shared-types'; // Importa Role
+import { useAuth } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils'; // <-- ADICIONADO: Importa helper cn
+import { loginBodySchema, Role } from '@repo/shared-types';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useState } from 'react'; // Importa FormEvent
-import { toast } from 'sonner'; // Mantém toast para erros
+import { FormEvent, useState } from 'react'; // Import React e FormEvent
+import { toast } from 'sonner';
+import { z } from 'zod'; // Importa Zod
 
-// REMOVIDO: Tipagens LoginData, LoginResponse, ApiError (agora gerenciadas no AuthContext/AuthProvider)
-// REMOVIDO: Função async function loginUser(credentials: LoginData)
+// Tipo inferido dos erros formatados pelo Zod
+type FormattedErrors = z.ZodFormattedError<
+  typeof loginBodySchema._input
+> | null;
 
-// --- Componente Principal da Página ---
 export default function LoginPage() {
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  // ADICIONADO: Estado local para exibir erros vindos do auth.login()
-  const [error, setError] = useState<string | null>(null);
+  // Renomeado para apiError para clareza
+  const [apiError, setApiError] = useState<string | null>(null);
+  // Estado para erros de validação Zod
+  const [validationErrors, setValidationErrors] =
+    useState<FormattedErrors>(null);
   const router = useRouter();
-  // MODIFICADO: Pega 'login' e 'isLoading' do contexto, remove useMutation
   const { login, isLoading } = useAuth();
 
-  // MODIFICADO: Usa 'isLoading' do contexto para desabilitar
-  const isDisabled =
-    loginIdentifier.trim() === '' || password.trim() === '' || isLoading;
+  const isDisabled = !loginIdentifier.trim() || !password.trim() || isLoading;
 
-  // MODIFICADO: handleSubmit agora chama auth.login() e faz o redirect
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (isDisabled) return;
-    setError(null); // Limpa erros anteriores
+    setApiError(null); // Limpa erro da API anterior
+    setValidationErrors(null); // Limpa erros de validação anteriores
+    if (isLoading) return;
 
+    const validationResult = loginBodySchema.safeParse({
+      loginIdentifier,
+      password,
+    });
+
+    if (!validationResult.success) {
+      setValidationErrors(validationResult.error.format());
+      return; // Para a execução se a validação falhar
+    }
+
+    // Se chegou aqui, a validação Zod passou. Chama o login.
     try {
-      // Chama a função login do CONTEXTO e espera o resultado
-      const loggedUser = await login({ loginIdentifier, password });
-
-      // Se chegou aqui, o login no AuthProvider foi bem-sucedido
-      toast.success('Login bem-sucedido!'); // Mantém toast de sucesso
-
-      // Redirecionamento baseado na role retornada pelo login do AuthProvider
+      const loggedUser = await login(validationResult.data); // Usa dados validados
+      toast.success('Login bem-sucedido!');
+      // Redirecionamento
       if (loggedUser.role === Role.ADMINISTRADOR) {
         router.push('/admin/dashboard');
       } else if (loggedUser.role === Role.ENCARREGADO) {
-        router.push('/requests/new'); // Ou para uma futura dashboard do Encarregado
+        router.push('/requests/new');
       } else {
-        // Role desconhecida ou não definida? Vai para a raiz como fallback.
-        console.warn(
-          'Role de usuário desconhecida após login:',
-          loggedUser.role
-        );
         router.push('/');
       }
     } catch (err: any) {
-      // Pega o erro lançado pela função login do AuthProvider
       console.error('Falha no login (componente):', err);
-      const errorMessage =
-        err.message || 'Erro desconhecido ao tentar fazer login.';
-      setError(errorMessage); // Define o erro local para exibição
-      toast.error(errorMessage); // Mostra o erro no toast também
+      const errorMessage = err.message || 'Erro desconhecido.';
+      setApiError(errorMessage); // Guarda erro da API
+      toast.error(errorMessage);
     }
   };
 
@@ -83,10 +86,14 @@ export default function LoginPage() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="grid gap-4">
-            {/* ADICIONADO: Exibe erro local */}
-            {error && (
-              <p className="text-sm font-medium text-destructive">{error}</p>
-            )}
+            {/* Exibe erro GERAL da API, se houver */}
+            {apiError &&
+              !validationErrors && ( // Só mostra se não houver erro de validação Zod
+                <p className="text-sm font-medium text-destructive">
+                  {apiError}
+                </p>
+              )}
+            {/* Campo Identificador */}
             <div className="grid gap-2">
               <Label htmlFor="loginIdentifier">Identificador (Email/CPF)</Label>
               <Input
@@ -96,9 +103,21 @@ export default function LoginPage() {
                 required
                 value={loginIdentifier}
                 onChange={(e) => setLoginIdentifier(e.target.value)}
-                disabled={isLoading} // <-- Usa isLoading do contexto
+                disabled={isLoading}
+                // <-- ADICIONADO: Estilo condicional de erro -->
+                className={cn(
+                  validationErrors?.loginIdentifier &&
+                    'border-destructive focus-visible:ring-destructive'
+                )}
               />
+              {/* <-- ADICIONADO: Exibe erro específico do Zod para este campo --> */}
+              {validationErrors?.loginIdentifier?._errors && (
+                <p className="text-sm font-medium text-destructive">
+                  {validationErrors.loginIdentifier._errors[0]}
+                </p>
+              )}
             </div>
+            {/* Campo Senha */}
             <div className="grid gap-2">
               <Label htmlFor="password">Senha</Label>
               <Input
@@ -107,13 +126,23 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading} // <-- Usa isLoading do contexto
+                disabled={isLoading}
+                // <-- ADICIONADO: Estilo condicional de erro -->
+                className={cn(
+                  validationErrors?.password &&
+                    'border-destructive focus-visible:ring-destructive'
+                )}
               />
+              {/* <-- ADICIONADO: Exibe erro específico do Zod para este campo --> */}
+              {validationErrors?.password?._errors && (
+                <p className="text-sm font-medium text-destructive">
+                  {validationErrors.password._errors[0]}
+                </p>
+              )}
             </div>
           </CardContent>
           <CardFooter>
             <Button className="w-full mt-8" type="submit" disabled={isDisabled}>
-              {/* MODIFICADO: Usa isLoading do contexto */}
               {isLoading ? (
                 <>
                   {' '}

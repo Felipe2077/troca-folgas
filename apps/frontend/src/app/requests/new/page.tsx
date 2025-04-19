@@ -1,13 +1,7 @@
-// apps/frontend/src/app/requests/new/page.tsx
+// apps/frontend/src/app/requests/new/page.tsx - COM VALIDAÇÃO ZOD FRONTEND
 'use client';
 
-import { useMutation } from '@tanstack/react-query'; // Importar useMutation
-import { useRouter } from 'next/navigation';
-import * as React from 'react';
-import { useState } from 'react';
-
-// Importa componentes Shadcn/ui
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute'; // Importa nosso guardião
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -17,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { DatePicker } from '@/components/ui/datepicker';
+import { DatePicker } from '@/components/ui/datepicker'; // Confirma import do seu DatePicker
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -27,11 +21,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Role } from '@repo/shared-types'; // Importa o Enum Role compartilhado
+import { useAuth } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils'; // <-- ZOD: Importa cn (necessário para estilo de erro)
+import {
+  EmployeeFunction,
+  ReliefGroup,
+  Role,
+  SwapRequest,
+  swapRequestCreateBodySchema,
+} from '@repo/shared-types'; // <-- ZOD: Importa tudo de shared-types
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
+import * as React from 'react';
+import { useState } from 'react'; // Import FormEvent e useEffect se necessário
 import { toast } from 'sonner';
+import { z } from 'zod'; // <-- ZOD: Importa Zod
 
-// Tipos (Enum podem ser substituídos por string se não vierem de pacote compartilhado)
-const employeeFunctionOptions = ['MOTORISTA', 'COBRADOR'] as const;
 const reliefGroupOptions = [
   'G1',
   'G2',
@@ -39,45 +44,53 @@ const reliefGroupOptions = [
   'SAB_DOMINGO',
   'FIXO_SABADO',
 ] as const;
-type EmployeeFunction = (typeof employeeFunctionOptions)[number];
-type ReliefGroup = (typeof reliefGroupOptions)[number];
+type SwapRequestFormData = z.infer<typeof swapRequestCreateBodySchema>;
+type FormattedErrors = z.ZodFormattedError<SwapRequestFormData> | null;
+const employeeFunctionOptions = ['MOTORISTA', 'COBRADOR'] as const;
 
-// Tipos para a mutação
-interface SwapRequestInput {
-  employeeIdOut: string;
-  employeeIdIn: string;
-  swapDate: Date; // Zod coerce.date garante que seja Date aqui
-  paybackDate: Date;
-  employeeFunction: EmployeeFunction;
-  groupOut: ReliefGroup;
-  groupIn: ReliefGroup;
-}
-
+// Interface para SubmitSwapRequestParams (mantém)
 interface SubmitSwapRequestParams {
-  formData: SwapRequestInput;
+  formData: SwapRequestFormData;
   token: string;
 }
-
-// Simula a estrutura da resposta da API (ajuste se necessário)
+// Interface para SwapRequestResponse (mantém)
 interface SwapRequestResponse {
-  request: {
-    id: number;
-    // ... outros campos se a API retornar ...
-  };
+  request: SwapRequest;
 }
-
+// Interface para ApiError (mantém)
 interface ApiError {
   message: string;
   issues?: unknown;
 }
 
-// --- Componente DatePicker (inalterado) ---
-
-// --- Fim do Componente DatePicker ---
+// --- Funções de API Call (mantidas como estavam) ---
+async function submitSwapRequestApi({
+  formData,
+  token,
+}: SubmitSwapRequestParams): Promise<SwapRequestResponse> {
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/requests`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(formData),
+    }
+  );
+  if (!response.ok) {
+    const errorData: ApiError = await response.json().catch(() => ({
+      message: `Erro ${response.status}: ${response.statusText}`,
+    }));
+    throw new Error(errorData.message || 'Falha ao criar solicitação.');
+  }
+  return response.json();
+}
 
 // --- Componente Principal da Página ---
 export default function NewRequestPage() {
-  // Estados do formulário
+  // Estados do formulário (mantidos)
   const [employeeIdOut, setEmployeeIdOut] = useState('');
   const [employeeIdIn, setEmployeeIdIn] = useState('');
   const [swapDate, setSwapDate] = useState<Date | undefined>(undefined);
@@ -87,62 +100,44 @@ export default function NewRequestPage() {
   >(undefined);
   const [groupOut, setGroupOut] = useState<ReliefGroup | undefined>(undefined);
   const [groupIn, setGroupIn] = useState<ReliefGroup | undefined>(undefined);
-  const [apiError, setApiError] = useState<string | null>(null); // Estado para erro da API
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] =
+    useState<FormattedErrors>(null);
 
   const router = useRouter();
+  const queryClient = useQueryClient(); // Necessário para onSuccess da mutation
+  const { token } = useAuth(); // Pega token para a mutation
 
-  // Função que faz a chamada à API
-  const submitSwapRequest = async ({
-    formData,
-    token,
-  }: SubmitSwapRequestParams): Promise<SwapRequestResponse> => {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/requests`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`, // <-- Inclui o token!
-        },
-        body: JSON.stringify(formData),
-      }
-    );
-
-    if (!response.ok) {
-      const errorData: ApiError = await response.json().catch(() => ({
-        message: `Erro ${response.status}: ${response.statusText}`,
-      }));
-      // Lança um erro que será pego pelo onError do useMutation
-      throw new Error(errorData.message || 'Falha ao criar solicitação.');
-    }
-    return response.json();
-  };
-
-  // Configuração da Mutação com React Query
-  const mutation = useMutation<
+  // Mutação para submeter o formulário
+  const submitRequestMutation = useMutation<
     SwapRequestResponse,
     Error,
     SubmitSwapRequestParams
   >({
-    mutationFn: submitSwapRequest,
+    mutationFn: submitSwapRequestApi, // Usa a função definida fora
     onSuccess: (data) => {
       console.log('Solicitação criada com sucesso:', data);
-      setApiError(null); // Limpa erros anteriores
       toast.success('Solicitação enviada com sucesso!');
-      // Limpar formulário?
+      setApiError(null);
+      // Limpa o formulário
       setEmployeeIdOut('');
       setEmployeeIdIn('');
-      setSwapDate(undefined); /* ...etc */
-      // Redirecionar para outra página?
+      setSwapDate(undefined);
+      setPaybackDate(undefined);
+      setEmployeeFunction(undefined);
+      setGroupOut(undefined);
+      setGroupIn(undefined);
+      setValidationErrors(null); // Limpa erros de validação também
+      // Não redireciona, permanece na página
     },
     onError: (error) => {
       console.error('Erro ao criar solicitação:', error);
-      setApiError(error.message); // Guarda a mensagem de erro para exibir na UI
+      setApiError(error.message); // Guarda erro da API
       toast.error(error.message || 'Erro ao criar solicitação.');
     },
   });
 
-  // Calcula estado desabilitado (inclui pending da mutação)
+  // Calcula estado desabilitado (agora inclui pending da mutação correta)
   const isDisabled =
     !employeeIdOut.trim() ||
     !employeeIdIn.trim() ||
@@ -151,42 +146,54 @@ export default function NewRequestPage() {
     !employeeFunction ||
     !groupOut ||
     !groupIn ||
-    mutation.isPending;
+    submitRequestMutation.isPending;
 
-  // Handler de submit
+  // Handler de submit (agora com validação Zod)
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setApiError(null); // Limpa erro API
+    setValidationErrors(null); // Limpa erro Zod
     if (isDisabled) return;
 
-    // 1. Pega o token do localStorage
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      // Idealmente, ter um hook/context que já faria isso ou redirecionaria
-      alert(
-        'Erro: Token de autenticação não encontrado. Faça login novamente.'
-      );
-      router.push('/login'); // Exemplo: Redireciona para login
+    // Coleta os dados atuais do estado
+    const currentFormData = {
+      employeeIdOut: employeeIdOut.trim(), // Envia trimed
+      employeeIdIn: employeeIdIn.trim(),
+      swapDate,
+      paybackDate,
+      employeeFunction,
+      groupOut,
+      groupIn,
+    };
+
+    // 1. Validar com Zod ANTES de preparar para API
+    const validationResult =
+      swapRequestCreateBodySchema.safeParse(currentFormData);
+
+    // 2. Se validação falhar, atualiza estado de erros e para
+    if (!validationResult.success) {
+      setValidationErrors(validationResult.error.format());
+      console.log('Erros Zod Frontend:', validationResult.error.format());
       return;
     }
 
-    // 2. Prepara os dados (garante que não tem undefined)
-    //    A validação do isDisabled já garante que não são undefined aqui
-    const formData: SwapRequestInput = {
-      employeeIdOut,
-      employeeIdIn,
-      swapDate: swapDate!,
-      paybackDate: paybackDate!,
-      employeeFunction: employeeFunction!,
-      groupOut: groupOut!,
-      groupIn: groupIn!,
-    };
+    // 3. Se OK, pega token e chama a mutação com dados VALIDADOS
+    const currentToken = localStorage.getItem('authToken'); // Renomeado para evitar conflito
+    if (!currentToken) {
+      toast.error('Erro de autenticação. Faça login novamente.');
+      router.push('/login');
+      return;
+    }
 
-    // 3. Limpa erro anterior e chama a mutação
-    setApiError(null);
-    mutation.mutate({ formData, token });
+    // Chama a mutação com os dados já validados pelo Zod e o token
+    submitRequestMutation.mutate({
+      formData: validationResult.data,
+      token: currentToken,
+    });
   };
 
   return (
+    // Permite apenas ENCARREGADO
     <ProtectedRoute allowedRoles={[Role.ENCARREGADO]}>
       <div className="flex justify-center pt-10">
         <Card className="w-full max-w-2xl">
@@ -198,18 +205,20 @@ export default function NewRequestPage() {
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Mensagem de erro da API */}
-              {apiError && (
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+              {' '}
+              {/* Ajustado gap */}
+              {/* Mensagem de erro geral da API (se houver) */}
+              {apiError && !validationErrors && (
                 <p className="md:col-span-2 text-sm font-medium text-destructive bg-destructive/10 p-3 rounded-md">
-                  Erro: {apiError}
+                  Erro no envio: {apiError}
                 </p>
               )}
-
               {/* Coluna 1 */}
               <div className="space-y-4">
-                {/* ... Input employeeIdOut (com value/onChange e disabled={mutation.isPending}) ... */}
-                <div className="grid gap-2">
+                <div className="grid gap-1.5">
+                  {' '}
+                  {/* Diminuido gap interno */}
                   <Label htmlFor="employeeIdOut">
                     Funcionário de Saída (Crachá)
                   </Label>
@@ -222,29 +231,61 @@ export default function NewRequestPage() {
                     inputMode="numeric"
                     pattern="[0-9]*"
                     onChange={(e) => {
-                      const v = e.target.value;
-                      setEmployeeIdOut(v.replace(/[^0-9]/g, ''));
-                    }}
-                    disabled={mutation.isPending}
+                      setEmployeeIdOut(e.target.value.replace(/[^0-9]/g, ''));
+                      setValidationErrors(null);
+                    }} // Limpa erro ao digitar
+                    disabled={submitRequestMutation.isPending}
+                    className={cn(
+                      validationErrors?.employeeIdOut &&
+                        'border-destructive focus-visible:ring-destructive'
+                    )} // <-- ZOD: Estilo de erro
                   />
+                  {/* <-- ZOD: Exibe erro --> */}
+                  {validationErrors?.employeeIdOut?._errors?.[0] && (
+                    <p className="text-sm font-medium text-destructive">
+                      {validationErrors.employeeIdOut._errors[0]}
+                    </p>
+                  )}
                 </div>
-                {/* ... DatePicker swapDate (com date/setDate e talvez disabled?) ... */}
-                <div className="grid gap-2">
+                <div className="grid gap-1.5">
                   <Label htmlFor="swapDate">
                     Data da Troca (Trabalho do Colega)
                   </Label>
-                  <DatePicker date={swapDate} setDate={setSwapDate} />
+                  <DatePicker
+                    date={swapDate}
+                    setDate={(d) => {
+                      setSwapDate(d);
+                      setValidationErrors(null);
+                    }}
+                  />{' '}
+                  {/* Limpa erro ao mudar */}
+                  {/* <-- ZOD: Exibe erro --> */}
+                  {validationErrors?.swapDate?._errors?.[0] && (
+                    <p className="text-sm font-medium text-destructive">
+                      {validationErrors.swapDate._errors[0]}
+                    </p>
+                  )}
                 </div>
-                {/* ... Select groupOut (com value/onValueChange e disabled={mutation.isPending}) ... */}
-                <div className="grid gap-2">
+                <div className="grid gap-1.5">
                   <Label htmlFor="groupOut">Grupo de Folga (Saída)</Label>
                   <Select
                     value={groupOut}
-                    onValueChange={(value: ReliefGroup) => setGroupOut(value)}
+                    onValueChange={(value: ReliefGroup) => {
+                      setGroupOut(value);
+                      setValidationErrors(null);
+                    }} // Limpa erro
                     required
-                    disabled={mutation.isPending}
+                    disabled={submitRequestMutation.isPending}
                   >
-                    <SelectTrigger id="groupOut">
+                    <SelectTrigger
+                      id="groupOut"
+                      className={cn(
+                        validationErrors?.groupOut &&
+                          'border-destructive focus-visible:ring-destructive'
+                      )}
+                    >
+                      {' '}
+                      {/* <-- ZOD: Estilo de erro */}
                       <SelectValue placeholder="Selecione o grupo de quem vai folgar" />
                     </SelectTrigger>
                     <SelectContent>
@@ -255,13 +296,17 @@ export default function NewRequestPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {/* <-- ZOD: Exibe erro --> */}
+                  {validationErrors?.groupOut?._errors?.[0] && (
+                    <p className="text-sm font-medium text-destructive">
+                      {validationErrors.groupOut._errors[0]}
+                    </p>
+                  )}
                 </div>
               </div>
-
               {/* Coluna 2 */}
               <div className="space-y-4">
-                {/* ... Input employeeIdIn (com value/onChange e disabled={mutation.isPending}) ... */}
-                <div className="grid gap-2">
+                <div className="grid gap-1.5">
                   <Label htmlFor="employeeIdIn">
                     Funcionário de Entrada (Crachá)
                   </Label>
@@ -274,29 +319,61 @@ export default function NewRequestPage() {
                     inputMode="numeric"
                     pattern="[0-9]*"
                     onChange={(e) => {
-                      const v = e.target.value;
-                      setEmployeeIdIn(v.replace(/[^0-9]/g, ''));
-                    }}
-                    disabled={mutation.isPending}
+                      setEmployeeIdIn(e.target.value.replace(/[^0-9]/g, ''));
+                      setValidationErrors(null);
+                    }} // Limpa erro
+                    disabled={submitRequestMutation.isPending}
+                    className={cn(
+                      validationErrors?.employeeIdIn &&
+                        'border-destructive focus-visible:ring-destructive'
+                    )} // <-- ZOD: Estilo de erro
                   />
+                  {/* <-- ZOD: Exibe erro --> */}
+                  {validationErrors?.employeeIdIn?._errors?.[0] && (
+                    <p className="text-sm font-medium text-destructive">
+                      {validationErrors.employeeIdIn._errors[0]}
+                    </p>
+                  )}
                 </div>
-                {/* ... DatePicker paybackDate (com date/setDate e talvez disabled?) ... */}
-                <div className="grid gap-2">
+                <div className="grid gap-1.5">
                   <Label htmlFor="paybackDate">
                     Data do Pagamento (Retorno da Folga)
                   </Label>
-                  <DatePicker date={paybackDate} setDate={setPaybackDate} />
+                  <DatePicker
+                    date={paybackDate}
+                    setDate={(d) => {
+                      setPaybackDate(d);
+                      setValidationErrors(null);
+                    }}
+                  />{' '}
+                  {/* Limpa erro */}
+                  {/* <-- ZOD: Exibe erro --> */}
+                  {validationErrors?.paybackDate?._errors?.[0] && (
+                    <p className="text-sm font-medium text-destructive">
+                      {validationErrors.paybackDate._errors[0]}
+                    </p>
+                  )}
                 </div>
-                {/* ... Select groupIn (com value/onValueChange e disabled={mutation.isPending}) ... */}
-                <div className="grid gap-2">
+                <div className="grid gap-1.5">
                   <Label htmlFor="groupIn">Grupo de Folga (Entrada)</Label>
                   <Select
                     value={groupIn}
-                    onValueChange={(value: ReliefGroup) => setGroupIn(value)}
+                    onValueChange={(value: ReliefGroup) => {
+                      setGroupIn(value);
+                      setValidationErrors(null);
+                    }} // Limpa erro
                     required
-                    disabled={mutation.isPending}
+                    disabled={submitRequestMutation.isPending}
                   >
-                    <SelectTrigger id="groupIn">
+                    <SelectTrigger
+                      id="groupIn"
+                      className={cn(
+                        validationErrors?.groupIn &&
+                          'border-destructive focus-visible:ring-destructive'
+                      )}
+                    >
+                      {' '}
+                      {/* <-- ZOD: Estilo de erro */}
                       <SelectValue placeholder="Selecione o grupo de quem vai cobrir" />
                     </SelectTrigger>
                     <SelectContent>
@@ -307,22 +384,35 @@ export default function NewRequestPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {/* <-- ZOD: Exibe erro --> */}
+                  {validationErrors?.groupIn?._errors?.[0] && (
+                    <p className="text-sm font-medium text-destructive">
+                      {validationErrors.groupIn._errors[0]}
+                    </p>
+                  )}
                 </div>
               </div>
-
               {/* Campo Função */}
-              <div className="grid gap-2 md:col-span-2">
+              <div className="grid gap-1.5 md:col-span-2">
                 <Label htmlFor="employeeFunction">Função</Label>
-                {/* ... Select employeeFunction (com value/onValueChange e disabled={mutation.isPending}) ... */}
                 <Select
                   value={employeeFunction}
-                  onValueChange={(value: EmployeeFunction) =>
-                    setEmployeeFunction(value)
-                  }
+                  onValueChange={(value: EmployeeFunction) => {
+                    setEmployeeFunction(value);
+                    setValidationErrors(null);
+                  }} // Limpa erro
                   required
-                  disabled={mutation.isPending}
+                  disabled={submitRequestMutation.isPending}
                 >
-                  <SelectTrigger id="employeeFunction">
+                  <SelectTrigger
+                    id="employeeFunction"
+                    className={cn(
+                      validationErrors?.employeeFunction &&
+                        'border-destructive focus-visible:ring-destructive'
+                    )}
+                  >
+                    {' '}
+                    {/* <-- ZOD: Estilo de erro */}
                     <SelectValue placeholder="Selecione a função" />
                   </SelectTrigger>
                   <SelectContent>
@@ -333,12 +423,20 @@ export default function NewRequestPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {/* <-- ZOD: Exibe erro --> */}
+                {validationErrors?.employeeFunction?._errors?.[0] && (
+                  <p className="text-sm font-medium text-destructive">
+                    {validationErrors.employeeFunction._errors[0]}
+                  </p>
+                )}
               </div>
             </CardContent>
             <CardFooter>
+              {/* Botão usa isDisabled (que já inclui isPending) */}
               <Button className="w-full" type="submit" disabled={isDisabled}>
-                {/* Mostra feedback de loading no botão */}
-                {mutation.isPending ? 'Enviando...' : 'Enviar Solicitação'}
+                {submitRequestMutation.isPending
+                  ? 'Enviando...'
+                  : 'Enviar Solicitação'}
               </Button>
             </CardFooter>
           </form>

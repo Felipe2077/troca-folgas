@@ -41,9 +41,27 @@ export function ProtectedRoute({
 
   // 4. Se está autenticado, tem usuário, mas a role NÃO é permitida
   if (!allowedRoles.includes(user.role)) {
-    redirect('/'); // Redireciona para home (ou /unauthorized)
+    console.log(
+      `[ProtectedRoute] Render - Role mismatch (${user.role} not allowed for this route), redirecting to default page for role...`
+    );
+
+    // *** LÓGICA DE REDIRECT POR ROLE ATUAL ***
+    if (user.role === Role.ADMINISTRADOR) {
+      redirect('/admin/dashboard'); // Se um Admin tentar acessar página de Encarregado (se houver)
+    } else if (user.role === Role.ENCARREGADO) {
+      redirect('/requests/new'); // Se um Encarregado tentar acessar página de Admin
+    } else {
+      console.warn(
+        `[ProtectedRoute] Unknown role (${user.role}) encountered, redirecting to /`
+      );
+      redirect('/'); // Fallback genérico para outras roles ou caso inesperado
+    }
+    // *** FIM DA LÓGICA DE REDIRECT ***
+
+    // O código abaixo não será executado por causa do redirect()
   }
 
-  // 5. Se passou por todas as verificações => Autorizado! Renderiza o conteúdo filho
+  // 5. Se passou por todas as verificações => Autorizado!
+  console.log('[ProtectedRoute] Render - Authorized! Rendering children.');
   return <>{children}</>;
 }
