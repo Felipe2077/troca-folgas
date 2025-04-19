@@ -179,7 +179,6 @@ export type SwapRequestInput = z.infer<typeof swapRequestCreateBodySchema>;
 // Atualização de Settings (AGORA COMPLETO)
 export const settingsUpdateSchema = z.object({
   submissionStartDay: z.nativeEnum(DayOfWeek, {
-    // <-- CORRIGIDO: Mensagens adicionadas
     required_error: 'Dia de início é obrigatório.',
     invalid_type_error: 'Dia de início inválido.',
   }),
