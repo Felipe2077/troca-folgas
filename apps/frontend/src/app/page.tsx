@@ -1,56 +1,50 @@
-import Image from 'next/image';
+// apps/frontend/src/app/page.tsx - COM REDIRECTS
+'use client'; // Precisa ser client component para usar hooks
 
-export default function Home() {
+import { useAuth } from '@/contexts/AuthContext'; // Nosso hook
+import { Role } from '@repo/shared-types';
+import { Loader2 } from 'lucide-react'; // Loader
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+
+export default function HomePage() {
+  const { isLoading, isAuthenticated, user } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    // Só executa depois que o estado de autenticação carregou
+    if (!isLoading) {
+      if (!isAuthenticated) {
+        // Não logado -> vai pro login
+        router.replace('/login');
+      } else if (user) {
+        // Logado -> vai para a página da role
+        if (user.role === Role.ADMINISTRADOR) {
+          router.replace('/admin/dashboard');
+        } else if (user.role === Role.ENCARREGADO) {
+          router.replace('/requests/new');
+        } else {
+          // Role desconhecida? Pode ir pro login ou uma página de erro.
+          console.warn(
+            'Usuário logado com role desconhecida na home:',
+            user.role
+          );
+          router.replace('/login'); // Segurança: manda pro login
+        }
+      } else {
+        // Autenticado mas sem user? Estado estranho, manda pro login.
+        console.error(
+          'Estado de autenticação inconsistente na home: isAuthenticated=true, user=null'
+        );
+        router.replace('/login');
+      }
+    }
+  }, [isLoading, isAuthenticated, user, router]);
+
+  // Mostra um loader enquanto verifica o estado de auth/redireciona
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start"></main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+    <div className="flex justify-center items-center min-h-screen">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
     </div>
   );
 }

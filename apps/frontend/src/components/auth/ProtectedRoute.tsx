@@ -47,14 +47,17 @@ export function ProtectedRoute({
 
     // *** LÓGICA DE REDIRECT POR ROLE ATUAL ***
     if (user.role === Role.ADMINISTRADOR) {
-      redirect('/admin/dashboard'); // Se um Admin tentar acessar página de Encarregado (se houver)
+      // Se é Admin tentando acessar pág não-admin (ex: /requests/new se protegêssemos só pra Encarregado)
+      redirect('/admin/dashboard');
     } else if (user.role === Role.ENCARREGADO) {
-      redirect('/requests/new'); // Se um Encarregado tentar acessar página de Admin
+      // Se é Encarregado tentando acessar pág Admin (ex: /admin/dashboard)
+      redirect('/requests/new'); // <-- Manda para a página do Encarregado
     } else {
+      // Se a role for desconhecida ou inesperada, manda pro login por segurança
       console.warn(
-        `[ProtectedRoute] Unknown role (${user.role}) encountered, redirecting to /`
+        `[ProtectedRoute] Unknown role (${user.role}) encountered, redirecting to /login`
       );
-      redirect('/'); // Fallback genérico para outras roles ou caso inesperado
+      redirect('/login');
     }
     // *** FIM DA LÓGICA DE REDIRECT ***
 
