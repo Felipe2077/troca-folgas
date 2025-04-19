@@ -180,8 +180,6 @@ export default function SettingsPage() {
     updateSettingsMutation.mutate(formData);
   };
 
-  console.log('[Render] Current state values:', { startDay, endDay }); // LOG 3
-
   return (
     <ProtectedRoute allowedRoles={[Role.ADMINISTRADOR]}>
       <Card className="w-full max-w-lg mx-auto">
@@ -199,11 +197,8 @@ export default function SettingsPage() {
                   <Label htmlFor="startDay">Dia de Início da Janela</Label>
                   <Select
                     value={startDay}
+                    key={startDay ?? 'initial-start'}
                     onValueChange={(value: DayOfWeek) => {
-                      // ADICIONE ESTE LOG:
-                      console.log(
-                        `!!! onValueChange startDay triggered. Received value: '${value}' (type: ${typeof value})`
-                      );
                       setStartDay(value);
                       setValidationErrors(null); // Mantém limpeza de erro
                     }}
@@ -232,11 +227,8 @@ export default function SettingsPage() {
                   <Label htmlFor="endDay">Dia Final da Janela</Label>
                   <Select
                     value={endDay}
+                    key={endDay ?? 'initial-end'}
                     onValueChange={(value: DayOfWeek) => {
-                      // ADICIONE ESTE LOG:
-                      console.log(
-                        `!!! onValueChange endDay triggered. Received value: '${value}' (type: ${typeof value})`
-                      );
                       setEndDay(value);
                       setValidationErrors(null); // Mantém limpeza de erro
                     }}
