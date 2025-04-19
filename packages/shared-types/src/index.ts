@@ -1,12 +1,12 @@
-// packages/shared-types/src/index.ts
-import { z } from 'zod'; // Adicione import do Zod aqui se não tiver
+// packages/shared-types/src/index.ts - VERSÃO COMPLETA E CORRIGIDA
+import { z } from 'zod';
 
-// Definindo Enums ou Tipos Literais (melhor que Enums TS para compartilhamento)
+// --- Definições de Tipos/Enums ---
 export const Role = {
   ADMINISTRADOR: 'ADMINISTRADOR',
   ENCARREGADO: 'ENCARREGADO',
 } as const;
-export type Role = (typeof Role)[keyof typeof Role]; // Cria o tipo 'ADMINISTRADOR' | 'ENCARREGADO'
+export type Role = (typeof Role)[keyof typeof Role];
 
 export const EmployeeFunction = {
   MOTORISTA: 'MOTORISTA',
@@ -36,31 +36,6 @@ export const SwapStatus = {
 } as const;
 export type SwapStatus = (typeof SwapStatus)[keyof typeof SwapStatus];
 
-// --- Interface/Tipo para SwapRequest ---
-// Baseado no modelo Prisma e no que precisamos no frontend/API
-export interface SwapRequest {
-  id: number;
-  employeeIdOut: string;
-  employeeIdIn: string;
-  swapDate: Date; // Ou string se preferir trafegar como ISO string
-  paybackDate: Date; // Ou string
-  employeeFunction: EmployeeFunction; // Usa o tipo definido acima
-  groupOut: ReliefGroup; // Usa o tipo definido acima
-  groupIn: ReliefGroup; // Usa o tipo definido acima
-  eventType: SwapEventType; // Usa o tipo definido acima
-  status: SwapStatus; // Usa o tipo definido acima
-  observation: string | null; // Mantém como string opcional ou nula
-  submittedById: number;
-  createdAt: Date; // Ou string
-  updatedAt: Date; // Ou string
-
-  // Opcional: Adicionar dados do usuário que submeteu, se necessário na listagem
-  // submittedBy?: {
-  //   id: number;
-  //   name: string;
-  // };
-}
-
 export const DayOfWeek = {
   SUNDAY: 'SUNDAY',
   MONDAY: 'MONDAY',
@@ -72,72 +47,145 @@ export const DayOfWeek = {
 } as const;
 export type DayOfWeek = (typeof DayOfWeek)[keyof typeof DayOfWeek];
 
-// Interface/Tipo para Settings (ATUALIZADO)
+// --- Interfaces ---
+export interface SwapRequest {
+  id: number;
+  employeeIdOut: string;
+  employeeIdIn: string;
+  swapDate: Date | string;
+  paybackDate: Date | string;
+  employeeFunction: EmployeeFunction;
+  groupOut: ReliefGroup;
+  groupIn: ReliefGroup;
+  eventType: SwapEventType;
+  status: SwapStatus;
+  observation: string | null;
+  submittedById: number;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
 export interface Settings {
-  id: number; // Geralmente 1
+  id: number;
   submissionStartDay: DayOfWeek;
   submissionEndDay: DayOfWeek;
   createdAt: Date | string;
   updatedAt: Date | string;
 }
 
-// Exporta o schema Zod para validar o corpo da requisição de login
+// --- Schemas Zod ---
+
+// Login
 export const loginBodySchema = z.object({
   loginIdentifier: z
     .string({ required_error: 'Identificador é obrigatório.' })
-    .min(1, 'Identificador não pode ser vazio.'), // Pelo menos 1 caractere
+    .min(1, 'Identificador não pode ser vazio.'),
   password: z
     .string({ required_error: 'Senha é obrigatória.' })
     .min(6, 'Senha precisa ter no mínimo 6 caracteres'),
 });
-
-// Exporta o tipo inferido se quiser usar no frontend
 export type LoginInput = z.infer<typeof loginBodySchema>;
 
-export const swapRequestCreateBodySchema = z.object({
-  employeeIdOut: z
-    .string({ required_error: 'Crachá de Saída obrigatório.' })
-    .trim()
-    .min(1, 'Crachá de Saída obrigatório.')
-    .regex(/^[0-9]+$/, 'Crachá de Saída deve conter apenas números.'), // Mantém validação numérica
-
-  employeeIdIn: z
-    .string({ required_error: 'Crachá de Entrada obrigatório.' })
-    .trim()
-    .min(1, 'Crachá de Entrada obrigatório.')
-    .regex(/^[0-9]+$/, 'Crachá de Entrada deve conter apenas números.'), // Mantém validação numérica
-
-  swapDate: z.date({
-    // Espera um objeto Date
-    required_error: 'Data da Troca é obrigatória.',
-    invalid_type_error: 'Data da Troca inválida.',
-  }),
-  paybackDate: z.date({
-    // Espera um objeto Date
-    required_error: 'Data do Pagamento da Folga é obrigatória.',
-    invalid_type_error: 'Data do Pagamento da Folga inválida.',
-  }),
-
-  // Usamos z.enum baseado nas CHAVES do objeto que exportamos
-  employeeFunction: z.enum(
-    Object.keys(EmployeeFunction) as [EmployeeFunction, ...EmployeeFunction[]],
-    {
-      required_error: 'Função é obrigatória.',
-      invalid_type_error: 'Função inválida.',
+// Criação de Swap Request (COM Refinamentos)
+export const swapRequestCreateBodySchema = z
+  .object({
+    employeeIdOut: z
+      .string({ required_error: 'Crachá de Saída obrigatório.' })
+      .trim()
+      .min(1, 'Crachá de Saída obrigatório.')
+      .regex(/^[0-9]+$/, 'Crachá de Saída deve conter apenas números.'),
+    employeeIdIn: z
+      .string({ required_error: 'Crachá de Entrada obrigatório.' })
+      .trim()
+      .min(1, 'Crachá de Entrada obrigatório.')
+      .regex(/^[0-9]+$/, 'Crachá de Entrada deve conter apenas números.'),
+    swapDate: z.date({
+      required_error: 'Data da Troca é obrigatória.',
+      invalid_type_error: 'Data da Troca inválida (deve ser objeto Date).',
+    }),
+    paybackDate: z.date({
+      required_error: 'Data do Pagamento da Folga é obrigatória.',
+      invalid_type_error: 'Data do Pagamento inválida (deve ser objeto Date).',
+    }),
+    employeeFunction: z.enum(
+      Object.keys(EmployeeFunction) as [
+        EmployeeFunction,
+        ...EmployeeFunction[],
+      ],
+      {
+        required_error: 'Função é obrigatória.',
+        invalid_type_error: 'Função inválida.',
+      }
+    ),
+    groupOut: z.enum(
+      Object.keys(ReliefGroup) as [ReliefGroup, ...ReliefGroup[]],
+      {
+        required_error: 'Grupo de Saída é obrigatório.',
+        invalid_type_error: 'Grupo de Saída inválido.',
+      }
+    ),
+    groupIn: z.enum(
+      Object.keys(ReliefGroup) as [ReliefGroup, ...ReliefGroup[]],
+      {
+        required_error: 'Grupo de Entrada é obrigatório.',
+        invalid_type_error: 'Grupo de Entrada inválido.',
+      }
+    ),
+  })
+  .superRefine((data, ctx) => {
+    // Regra 1: Crachás diferentes
+    if (
+      data.employeeIdOut &&
+      data.employeeIdIn &&
+      data.employeeIdOut === data.employeeIdIn
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Crachá de Entrada deve ser diferente do Crachá de Saída.',
+        path: ['employeeIdIn'],
+      });
     }
-  ),
-  groupOut: z.enum(
-    Object.keys(ReliefGroup) as [ReliefGroup, ...ReliefGroup[]],
-    {
-      required_error: 'Grupo de Saída é obrigatório.',
-      invalid_type_error: 'Grupo de Saída inválido.',
+    // Regra 2: Datas futuras
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (data.swapDate && data.swapDate < today) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Data da Troca não pode ser no passado.',
+        path: ['swapDate'],
+      });
     }
-  ),
-  groupIn: z.enum(Object.keys(ReliefGroup) as [ReliefGroup, ...ReliefGroup[]], {
-    required_error: 'Grupo de Entrada é obrigatório.',
-    invalid_type_error: 'Grupo de Entrada inválido.',
+    if (data.paybackDate && data.paybackDate < today) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Data do Pagamento não pode ser no passado.',
+        path: ['paybackDate'],
+      });
+    }
+    // Regra 3: Datas diferentes
+    if (
+      data.swapDate &&
+      data.paybackDate &&
+      data.swapDate.toDateString() === data.paybackDate.toDateString()
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Data da Troca e Data do Pagamento não podem ser o mesmo dia.',
+        path: ['paybackDate'],
+      });
+    }
+  });
+export type SwapRequestInput = z.infer<typeof swapRequestCreateBodySchema>;
+
+// Atualização de Settings (AGORA COMPLETO)
+export const settingsUpdateSchema = z.object({
+  submissionStartDay: z.nativeEnum(DayOfWeek, {
+    // <-- CORRIGIDO: Mensagens adicionadas
+    required_error: 'Dia de início é obrigatório.',
+    invalid_type_error: 'Dia de início inválido.',
+  }),
+  submissionEndDay: z.nativeEnum(DayOfWeek, {
+    required_error: 'Dia final é obrigatório.',
+    invalid_type_error: 'Dia final inválido.',
   }),
 });
-
-// Exporta o tipo inferido também
-export type SwapRequestInput = z.infer<typeof swapRequestCreateBodySchema>;
+export type SettingsUpdateInput = z.infer<typeof settingsUpdateSchema>;

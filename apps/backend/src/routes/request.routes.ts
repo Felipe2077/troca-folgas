@@ -1,6 +1,7 @@
 // apps/backend/src/routes/request.routes.ts
 import { DayOfWeek, Role, SwapEventType, SwapStatus } from '@prisma/client';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { swapRequestCreateBodySchema /* ... */ } from '@repo/shared-types';
 import { getISOWeek } from 'date-fns'; // Helpers de data
 import { FastifyInstance } from 'fastify';
 import { z, ZodError } from 'zod';
@@ -10,7 +11,6 @@ import {
   requestIdParamsSchema,
   requestListQuerySchema,
   requestUpdateObservationBodySchema,
-  swapRequestCreateBodySchema,
 } from '../schemas/request.schema.js'; // Nosso schema Zod
 
 // Helper para verificar se é Sábado ou Domingo
@@ -179,12 +179,10 @@ export async function requestRoutes(fastify: FastifyInstance) {
             settingsError
           );
           // Se não conseguir ler as settings, é mais seguro bloquear a submissão
-          return reply
-            .status(500)
-            .send({
-              message:
-                'Erro interno ao verificar período de submissão. Tente novamente mais tarde.',
-            });
+          return reply.status(500).send({
+            message:
+              'Erro interno ao verificar período de submissão. Tente novamente mais tarde.',
+          });
         }
 
         // 4. Calcular eventType (Troca ou Substituição)
