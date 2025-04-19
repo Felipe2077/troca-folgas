@@ -98,11 +98,11 @@ export const swapRequestCreateBodySchema = z
       .trim()
       .min(1, 'Crachá de Entrada obrigatório.')
       .regex(/^[0-9]+$/, 'Crachá de Entrada deve conter apenas números.'),
-    swapDate: z.date({
+    swapDate: z.coerce.date({
       required_error: 'Data da Troca é obrigatória.',
       invalid_type_error: 'Data da Troca inválida (deve ser objeto Date).',
     }),
-    paybackDate: z.date({
+    paybackDate: z.coerce.date({
       required_error: 'Data do Pagamento da Folga é obrigatória.',
       invalid_type_error: 'Data do Pagamento inválida (deve ser objeto Date).',
     }),
