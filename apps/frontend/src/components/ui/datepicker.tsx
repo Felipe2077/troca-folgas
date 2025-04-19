@@ -1,7 +1,10 @@
-'use client'; // Se estiver em arquivo separado
+// apps/frontend/src/components/ui/datepicker.tsx (ou onde estiver definido)
+'use client';
 
 import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { Calendar as CalendarIcon } from 'lucide-react';
+import { useState } from 'react'; // Importa useState
 
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -11,27 +14,21 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { ptBR } from 'date-fns/locale';
 
-// Interface para as props do DatePicker
 interface DatePickerProps {
   date: Date | undefined;
   setDate: (date: Date | undefined) => void;
-  // Você pode adicionar outras props como placeholder, etc.
 }
 
 export function DatePicker({ date, setDate }: DatePickerProps) {
-  // ESTE componente NÃO tem mais seu próprio useState para a data
+  // ADICIONADO: Estado para controlar se o popover está aberto
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
-    <Popover>
+    // Passa o estado e o setter para o Popover
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant={'outline'}
-          className={cn(
-            'w-full justify-start text-left font-normal', // Modificado para w-full
-            !date && 'text-muted-foreground'
-          )}
-        >
+        <Button variant={'outline'} className={cn(/* ... classes ... */)}>
           <CalendarIcon className="mr-2 h-4 w-4" />
           {date ? (
             format(date, 'PPP', { locale: ptBR })
@@ -43,8 +40,12 @@ export function DatePicker({ date, setDate }: DatePickerProps) {
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
           mode="single"
-          selected={date} // Usa a prop 'date'
-          onSelect={setDate} // Usa a prop 'setDate'
+          selected={date}
+          // Modifica o onSelect
+          onSelect={(selectedDay, _activeModifiers, _e) => {
+            setDate(selectedDay); // Atualiza a data no componente pai
+            setIsOpen(false); // FECHA o popover
+          }}
           initialFocus
         />
       </PopoverContent>
