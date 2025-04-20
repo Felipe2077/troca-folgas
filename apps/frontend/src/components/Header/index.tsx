@@ -14,7 +14,7 @@ export function Header() {
   return (
     <header className="bg-primary text-primary-foreground p-2 shadow-md  ">
       <div className="container mx-auto flex justify-between items-center">
-        <div className="flex items-center">
+        <div className="flex items-center" suppressHydrationWarning>
           <Image alt="logo" src="/logo.png" width={56} height={56} />
           <Link
             href="/"
