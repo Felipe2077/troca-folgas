@@ -35,9 +35,9 @@ export function Header() {
                   <Link href="/admin/settings" passHref>
                     <Button variant="ghost" size="sm">
                       <Settings className="h-4 w-4 mr-1 sm:mr-2" />
-                      <span className="hidden sm:inline">
+                      <span className="hidden sm:inline text-base">
                         Configurações
-                      </span>{' '}
+                      </span>
                       {/* Texto some em telas pequenas */}
                     </Button>
                   </Link>
@@ -47,10 +47,10 @@ export function Header() {
                       size="sm"
                       title="Gerenciar Usuários"
                     >
-                      <Users className="h-4 w-4 sm:mr-1" />{' '}
-                      {/* Ícone Usuários */}
-                      <span className="hidden sm:inline">Usuários</span>{' '}
-                      {/* Texto */}
+                      <Users className="h-4 w-4 sm:mr-1" />
+                      <span className="hidden sm:inline text-base">
+                        Usuários
+                      </span>
                     </Button>
                   </Link>
                 </>
@@ -61,7 +61,7 @@ export function Header() {
                 <Button variant="ghost" size="sm" onClick={logout}>
                   {/* Chama a função logout do contexto */}
                   <LogOut className="h-4 w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Sair</span>
+                  <span className="hidden sm:inline text-base">Sair</span>
                 </Button>
               )}
             </>

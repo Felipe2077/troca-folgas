@@ -37,7 +37,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { formatDate } from '@/lib/utils';
+import { cn, formatDate } from '@/lib/utils';
 import {
   Role,
   SwapEventType,
@@ -315,11 +315,16 @@ export default function AdminDashboardPage() {
                     <TableCell>{formatDate(req.paybackDate)}</TableCell>
                     <TableCell>
                       <Badge
-                        variant={
+                        // variant={
+                        //   req.eventType === SwapEventType.TROCA
+                        //     ? 'secondary'
+                        //     : 'outline'
+                        // }
+                        className={cn(
                           req.eventType === SwapEventType.TROCA
-                            ? 'secondary'
-                            : 'outline'
-                        }
+                            ? 'bg-blue-900'
+                            : 'bg-amber-900'
+                        )}
                       >
                         {req.eventType}
                       </Badge>
