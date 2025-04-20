@@ -1,6 +1,4 @@
 // apps/frontend/src/app/layout.tsx
-import { Footer } from '@/components/Footer';
-import { Header } from '@/components/Header';
 import { Providers } from '@/components/providers';
 import { Toaster } from '@/components/ui/sonner';
 import type { Metadata } from 'next';
@@ -25,11 +23,7 @@ export default function RootLayout({
         className={`${inter.className} flex flex-col min-h-full bg-gradient-to-br from-[#111] via-[#212121] to-[#111]  flex-1 text-foreground`}
       >
         <Providers>
-          <Header />
-          <main className="flex-grow container mx-auto p-4 py-6 ">
-            {children}
-          </main>
-          <Footer />
+          <main>{children}</main>
           <Toaster richColors position="top-center" />
         </Providers>
       </body>

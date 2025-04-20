@@ -5,8 +5,7 @@ export function Footer() {
   return (
     <footer className="bg-primary text-muted-foreground p-4 mt-auto text-center text-sm">
       <p>
-        &copy; {currentYear} Seu Nome/Empresa Aqui. Todos os direitos
-        reservados.
+        &copy; {currentYear} TI Viação Pioneira. Todos os direitos reservados.
       </p>
     </footer>
   );
