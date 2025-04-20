@@ -194,6 +194,7 @@ export type PublicUser = {
   name: string;
   loginIdentifier: string;
   role: Role;
+  isActive: boolean;
   createdAt: Date | string;
   updatedAt: Date | string;
 };

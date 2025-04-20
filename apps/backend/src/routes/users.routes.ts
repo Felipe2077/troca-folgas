@@ -34,6 +34,7 @@ export async function usersRoutes(fastify: FastifyInstance) {
             name: true,
             loginIdentifier: true,
             role: true,
+            isActive: true,
             createdAt: true,
             updatedAt: true,
             // NUNCA inclua passwordHash aqui!
