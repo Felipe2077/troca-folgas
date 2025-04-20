@@ -188,3 +188,12 @@ export const settingsUpdateSchema = z.object({
   }),
 });
 export type SettingsUpdateInput = z.infer<typeof settingsUpdateSchema>;
+
+export type PublicUser = {
+  id: number;
+  name: string;
+  loginIdentifier: string;
+  role: Role;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+};
