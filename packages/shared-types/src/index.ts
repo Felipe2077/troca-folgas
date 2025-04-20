@@ -197,3 +197,22 @@ export type PublicUser = {
   createdAt: Date | string;
   updatedAt: Date | string;
 };
+
+// Schema Zod para registro (usado no backend e agora no frontend)
+export const registerBodySchema = z.object({
+  name: z
+    .string({ required_error: 'Nome é obrigatório.' })
+    .trim()
+    .min(3, 'Nome precisa ter no mínimo 3 caracteres.'),
+  loginIdentifier: z
+    .string({ required_error: 'Identificador é obrigatório.' })
+    .trim()
+    .min(1, 'Identificador não pode ser vazio.'), // Pode adicionar .email() ou outra validação aqui se quiser
+  password: z
+    .string({ required_error: 'Senha é obrigatória.' })
+    .min(6, 'Senha precisa ter no mínimo 6 caracteres.'),
+  role: z.nativeEnum(Role, {
+    required_error: 'Cargo é obrigatório.',
+    invalid_type_error: 'Cargo inválido.',
+  }),
+});

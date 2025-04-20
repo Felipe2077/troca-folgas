@@ -24,6 +24,7 @@ import { formatDate } from '@/lib/utils';
 import { PublicUser, Role } from '@repo/shared-types'; // <-- Importa PublicUser e Role
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, PlusCircle } from 'lucide-react'; // Ícone para botão Criar
+import Link from 'next/link';
 
 // --- Função para Buscar Usuários ---
 async function fetchUsers(token: string | null): Promise<PublicUser[]> {
@@ -73,12 +74,14 @@ export default function AdminUsersPage() {
           </div>
           <div>
             {/* TODO: Criar página /admin/users/new e habilitar link */}
-            <Button size="sm" className="ml-auto gap-1" disabled>
-              <PlusCircle className="h-3.5 w-3.5" />
-              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                Criar Usuário
-              </span>
-            </Button>
+            <Link href="/admin/users/new" passHref>
+              <Button size="sm" className="ml-auto gap-1">
+                <PlusCircle className="h-3.5 w-3.5" />
+                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                  Criar Usuário
+                </span>
+              </Button>
+            </Link>
             {/* <Link href="/admin/users/new" passHref>
                 <Button size="sm" className="ml-auto gap-1">...</Button>
              </Link> */}
