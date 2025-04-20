@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import {
   Table,
   TableBody,
@@ -206,7 +207,9 @@ export default function AdminDashboardPage() {
     <ProtectedRoute allowedRoles={[Role.ADMINISTRADOR]}>
       <Card>
         <CardHeader>
-          <CardTitle>Dashboard do Administrador</CardTitle>
+          <CardTitle className="md:text-2xl pb-2">
+            Dashboard do Administrador
+          </CardTitle>
           <CardDescription>
             Visualização e gerenciamento das solicitações de troca e
             substituição de folgas.
@@ -332,7 +335,7 @@ export default function AdminDashboardPage() {
                         {req.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="whitespace-normal max-w-[250px]">
+                    <TableCell className="whitespace-normal max-w-[350px] break-words">
                       {req.observation || '-'}
                     </TableCell>
                     <TableCell>{formatDate(req.createdAt)}</TableCell>
@@ -350,8 +353,10 @@ export default function AdminDashboardPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                          <Separator className="mb-1" />
                           <DropdownMenuItem
                             onClick={() => setEditingRequest(req)}
+                            className="cursor-pointer"
                           >
                             Adicionar/Ver Observação
                           </DropdownMenuItem>
@@ -364,7 +369,7 @@ export default function AdminDashboardPage() {
                               req.status === SwapStatus.NAO_REALIZADA ||
                               markAsNotRealizedMutation.isPending
                             }
-                            className="text-red-600 focus:bg-red-100 focus:text-red-700"
+                            className="text-red-600 focus:bg-red-100 focus:text-red-700 cursor-pointer"
                           >
                             {markAsNotRealizedMutation.isPending &&
                             markAsNotRealizedMutation.variables === req.id

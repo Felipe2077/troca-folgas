@@ -15,7 +15,10 @@ export function Header() {
     <header className="bg-primary text-primary-foreground p-2 shadow-md  ">
       <div className="container mx-auto flex justify-between items-center">
         <Image alt="logo" src="/logo.png" width={56} height={56} />
-        <Link href="/" className="text-2xl font-semibold hover:opacity-90">
+        <Link
+          href="/"
+          className="text-xl sm:text-2xl font-semibold hover:opacity-90"
+        >
           Troca de Folgas
         </Link>
 

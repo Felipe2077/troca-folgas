@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils'; // <-- ZOD: Importa cn para classes condicionais
 import {
@@ -204,12 +205,15 @@ export default function NewRequestPage() {
       <div className="flex justify-center pt-10">
         <Card className="w-full max-w-2xl">
           <CardHeader>
-            <CardTitle>Nova Solicitação de Troca/Substituição</CardTitle>
-            <CardDescription>
+            <CardTitle className="sm:text-2xl mb-4">
+              Nova Solicitação de Troca/Substituição
+            </CardTitle>
+            <CardDescription className="sm:text-base">
               Preencha os dados abaixo para registrar a troca ou substituição de
               folga.
             </CardDescription>
           </CardHeader>
+          <Separator />
           <form onSubmit={handleSubmit}>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
               {/* Mensagem de erro geral da API (mantida) */}
@@ -222,7 +226,7 @@ export default function NewRequestPage() {
               {/* Coluna 1 */}
               <div className="space-y-1">
                 {/* --- Campo employeeIdOut --- */}
-                <div className="grid gap-1.5">
+                <div className="grid gap-1.5 ">
                   <Label htmlFor="employeeIdOut">
                     Funcionário de Saída (Crachá)
                   </Label>
@@ -252,7 +256,7 @@ export default function NewRequestPage() {
                   )}
                 </div>
                 {/* --- Campo swapDate --- */}
-                <div className="grid gap-1.5">
+                <div className="grid gap-1.5 my-6">
                   <Label htmlFor="swapDate">
                     Data da Troca (Trabalho do Colega)
                   </Label>
@@ -279,7 +283,7 @@ export default function NewRequestPage() {
                   )}
                 </div>
                 {/* --- Campo groupOut --- */}
-                <div className="grid gap-1.5">
+                <div className="grid gap-1.5 my-6">
                   <Label htmlFor="groupOut">Grupo de Folga (Saída)</Label>
                   <Select
                     value={groupOut}
@@ -318,7 +322,7 @@ export default function NewRequestPage() {
                   )}
                 </div>
               </div>
-
+              <Separator className="md:hidden mb-6 bg-amber-950" />
               {/* Coluna 2 */}
               <div className="space-y-1">
                 {/* --- Campo employeeIdIn --- */}
@@ -359,7 +363,7 @@ export default function NewRequestPage() {
                   )}
                 </div>
                 {/* --- Campo paybackDate --- */}
-                <div className="grid gap-1.5">
+                <div className="grid gap-1.5 my-6">
                   <Label htmlFor="paybackDate">
                     Data do Pagamento (Retorno da Folga)
                   </Label>
@@ -433,6 +437,7 @@ export default function NewRequestPage() {
                   )}
                 </div>
               </div>
+              <Separator className="md:hidden my-6 bg-amber-950" />
 
               {/* --- Campo Função --- */}
               <div className="grid gap-1.5 md:col-span-2">
@@ -475,7 +480,11 @@ export default function NewRequestPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" type="submit" disabled={isDisabled}>
+              <Button
+                className="w-full my-6"
+                type="submit"
+                disabled={isDisabled}
+              >
                 {submitRequestMutation.isPending
                   ? 'Enviando...'
                   : 'Enviar Solicitação'}

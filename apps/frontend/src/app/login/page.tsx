@@ -77,7 +77,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex justify-center items-center pt-10">
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-xl ">
         <CardHeader>
           <CardTitle className="text-2xl">Login</CardTitle>
           <CardDescription>
@@ -95,17 +95,19 @@ export default function LoginPage() {
               )}
             {/* Campo Identificador */}
             <div className="grid gap-2">
-              <Label htmlFor="loginIdentifier">Identificador (Email/CPF)</Label>
+              <Label htmlFor="loginIdentifier" className="text-base">
+                Identificador (Email/CPF)
+              </Label>
               <Input
                 id="loginIdentifier"
                 type="text"
-                placeholder="seu.identificador"
+                placeholder="Digite o CPF"
                 required
                 value={loginIdentifier}
                 onChange={(e) => setLoginIdentifier(e.target.value)}
                 disabled={isLoading}
-                // <-- ADICIONADO: Estilo condicional de erro -->
                 className={cn(
+                  'h-14 placeholder:text-base',
                   validationErrors?.loginIdentifier &&
                     'border-destructive focus-visible:ring-destructive'
                 )}
@@ -118,8 +120,10 @@ export default function LoginPage() {
               )}
             </div>
             {/* Campo Senha */}
-            <div className="grid gap-2">
-              <Label htmlFor="password">Senha</Label>
+            <div className="grid gap-2 mt-2 ">
+              <Label htmlFor="password" className="text-base">
+                Senha
+              </Label>
               <Input
                 id="password"
                 type="password"
@@ -129,6 +133,7 @@ export default function LoginPage() {
                 disabled={isLoading}
                 // <-- ADICIONADO: Estilo condicional de erro -->
                 className={cn(
+                  'h-14',
                   validationErrors?.password &&
                     'border-destructive focus-visible:ring-destructive'
                 )}
@@ -145,9 +150,7 @@ export default function LoginPage() {
             <Button className="w-full mt-8" type="submit" disabled={isDisabled}>
               {isLoading ? (
                 <>
-                  {' '}
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />{' '}
-                  Entrando...{' '}
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Entrando...
                 </>
               ) : (
                 'Entrar'
