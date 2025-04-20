@@ -35,6 +35,15 @@ export async function authRoutes(fastify: FastifyInstance) {
       if (!user) {
         return reply.status(401).send({ message: 'Credenciais inválidas.' });
       }
+      if (!user.isActive) {
+        // Se o campo isActive for false, retorna erro 403 Forbidden
+        fastify.log.warn(
+          `Login attempt for deactivated user: ${user.loginIdentifier}`
+        ); // Log opcional
+        return reply
+          .status(403)
+          .send({ message: 'Conta de usuário desativada.' });
+      }
 
       const isPasswordCorrect = await comparePassword(
         body.password,
@@ -96,12 +105,10 @@ export async function authRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         if (request.user.role !== Role.ADMINISTRADOR) {
-          return reply
-            .status(403)
-            .send({
-              message:
-                'Acesso negado. Apenas administradores podem registrar novos usuários.',
-            });
+          return reply.status(403).send({
+            message:
+              'Acesso negado. Apenas administradores podem registrar novos usuários.',
+          });
         }
         // 1. Validar o corpo da requisição
         const body = registerBodySchema.parse(request.body);
