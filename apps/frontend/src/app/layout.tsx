@@ -22,11 +22,11 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className="h-full" suppressHydrationWarning>
       <body
-        className={`${inter.className} flex flex-col min-h-full bg-background text-foreground`}
+        className={`${inter.className} flex flex-col min-h-full bg-gradient-to-br from-[#111] via-[#151515] to-[#0f0f0f]  flex-1text-foreground`}
       >
         <Providers>
           <Header />
-          <main className="flex-grow container mx-auto p-4 py-6">
+          <main className="flex-grow container mx-auto p-4 py-6 ">
             {children}
           </main>
           <Footer />

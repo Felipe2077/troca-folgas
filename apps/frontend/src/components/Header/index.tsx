@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext'; // Hook de Auth
 import { Role } from '@repo/shared-types';
 import { Loader2, LogOut, Settings } from 'lucide-react'; // Ícones
+import Image from 'next/image';
 import Link from 'next/link';
 
 export function Header() {
@@ -11,11 +12,11 @@ export function Header() {
   const { isAuthenticated, user, logout, isLoading } = useAuth();
 
   return (
-    <header className="bg-primary text-primary-foreground p-4 shadow-md">
+    <header className="bg-primary text-primary-foreground p-2 shadow-md  ">
       <div className="container mx-auto flex justify-between items-center">
-        {/* Link para a Home */}
-        <Link href="/" className="text-xl font-semibold hover:opacity-90">
-          Sistema de Troca de Folgas
+        <Image alt="logo" src="/logo.png" width={56} height={56} />
+        <Link href="/" className="text-2xl font-semibold hover:opacity-90">
+          Troca de Folgas
         </Link>
 
         {/* Navegação Condicional */}

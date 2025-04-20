@@ -42,6 +42,7 @@ await app.register(cors, {
       'http://localhost:3000',
       'http://10.10.112.205:3000', // pioneira,
       'http://192.168.2.115:3000', // casa,
+      'http://192.168.2.108:3000', //casawifi
     ];
 
     // Verifica se a origem recebida está na lista ou se não há origem
