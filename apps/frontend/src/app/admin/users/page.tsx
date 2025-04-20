@@ -37,11 +37,11 @@ import { PublicUser, Role } from '@repo/shared-types'; // Tipos ok
 // <-- ADDED/MODIFIED: Imports do React Query e outros -->
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  Ban,
   CheckCircle,
   Loader2,
   MoreHorizontal,
   PlusCircle,
-  Trash2,
 } from 'lucide-react'; // Adiciona ícones necessários
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -272,9 +272,7 @@ export default function AdminUsersPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                          <DropdownMenuItem disabled>
-                            Editar
-                          </DropdownMenuItem>{' '}
+                          <DropdownMenuItem disabled>Editar</DropdownMenuItem>
                           {/* Placeholder */}
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
@@ -295,7 +293,7 @@ export default function AdminUsersPage() {
                               user.id ? (
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             ) : user.isActive ? (
-                              <Trash2 className="mr-2 h-4 w-4" />
+                              <Ban className="mr-2 h-4 w-4" />
                             ) : (
                               <CheckCircle className="mr-2 h-4 w-4" />
                             )}
