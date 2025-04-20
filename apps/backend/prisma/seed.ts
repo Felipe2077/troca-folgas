@@ -25,6 +25,7 @@ async function main() {
         loginIdentifier: 'admin@sistema.com',
         passwordHash: adminPasswordHash,
         role: Role.ADMINISTRADOR,
+        isActive: true,
       },
     });
     console.log(
@@ -46,6 +47,7 @@ async function main() {
         loginIdentifier: 'encarregado@teste.com',
         passwordHash: encargadoPasswordHash,
         role: Role.ENCARREGADO,
+        isActive: true,
       },
     });
     console.log(
