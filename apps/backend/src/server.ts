@@ -8,6 +8,7 @@ import { envSchemaJson, zodEnvSchema } from './config/env.validation.js'; // <--
 import { authRoutes } from './routes/auth.routes.js';
 import { requestRoutes } from './routes/request.routes.js';
 import { settingsRoutes } from './routes/settings.routes.js';
+import { usersRoutes } from './routes/users.routes.js';
 
 // Declare tipos para as variáveis de ambiente validadas
 declare module 'fastify' {
@@ -63,6 +64,7 @@ await app.register(cors, {
 await app.register(authRoutes, { prefix: '/api/auth' });
 await app.register(requestRoutes, { prefix: '/api/requests' });
 await app.register(settingsRoutes, { prefix: '/api/settings' });
+await app.register(usersRoutes, { prefix: '/api/users' });
 
 // ----- INICIALIZAÇÃO DO SERVIDOR -----
 const start = async () => {
