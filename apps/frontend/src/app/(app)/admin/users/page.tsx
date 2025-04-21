@@ -178,8 +178,8 @@ export default function AdminUsersPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Gerenciamento de Usuários</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-xl">Gerenciamento de Usuários</CardTitle>
+            <CardDescription className="text-base mt-2 mb-4">
               Visualize e gerencie os usuários do sistema.
             </CardDescription>
           </div>
@@ -214,16 +214,18 @@ export default function AdminUsersPage() {
 
           {!isLoading && !isError && users && users.length > 0 && (
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-stone-800">
                 <TableRow>
-                  <TableHead className="w-[80px]">ID</TableHead>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Identificador Login</TableHead>
-                  <TableHead>Role</TableHead>
-                  {/* <-- ADDED/MODIFIED: Header Status Ativo --> */}
-                  <TableHead>Status Ativo</TableHead>
-                  <TableHead>Criado Em</TableHead>
-                  <TableHead>
+                  <TableHead className="w-[80px] text-base">ID</TableHead>
+                  <TableHead className="text-base">Nome</TableHead>
+                  <TableHead className="text-base">
+                    Identificador Login
+                  </TableHead>
+                  <TableHead className="text-base">Role</TableHead>
+                  {/* <-- Header Status Ativo --> */}
+                  <TableHead className="text-base">Status Ativo</TableHead>
+                  <TableHead className="text-base">Criado Em</TableHead>
+                  <TableHead className="text-base">
                     <span className="sr-only">Ações</span>
                   </TableHead>
                 </TableRow>
@@ -231,16 +233,17 @@ export default function AdminUsersPage() {
               <TableBody>
                 {users.map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.id}</TableCell>
-                    <TableCell>{user.name}</TableCell>
-                    <TableCell>{user.loginIdentifier}</TableCell>
-                    <TableCell>
+                    <TableCell className="font-medium ">{user.id}</TableCell>
+                    <TableCell className="">{user.name}</TableCell>
+                    <TableCell className="">{user.loginIdentifier}</TableCell>
+                    <TableCell className="">
                       <Badge
                         variant={
                           user.role === Role.ADMINISTRADOR
                             ? 'default'
                             : 'secondary'
                         }
+                        // className="text-base"
                       >
                         {user.role}
                       </Badge>

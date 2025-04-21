@@ -265,25 +265,25 @@ export default function AdminDashboardPage() {
 
           {!isQueryLoading && !isError && requests && requests.length > 0 && (
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-stone-800">
                 <TableRow>
                   {/* Cabeçalhos - MODIFICADO 'Criado Em' */}
-                  <TableHead className="w-[50px]">ID</TableHead>
-                  <TableHead>Sai (Crachá)</TableHead>
-                  <TableHead>Entra (Crachá)</TableHead>
-                  <TableHead>Função</TableHead>
-                  <TableHead>Data Troca</TableHead>
+                  <TableHead className="w-[50px] text-base">ID</TableHead>
+                  <TableHead className="text-base">Sai (Crachá)</TableHead>
+                  <TableHead className="text-base">Entra (Crachá)</TableHead>
+                  <TableHead className="text-base">Função</TableHead>
+                  <TableHead className="text-base">Data Troca</TableHead>
                   {/* TODO: Tornar clicável depois */}
-                  <TableHead>Data Pagamento</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Observação</TableHead>
+                  <TableHead className="text-base">Data Pagamento</TableHead>
+                  <TableHead className="text-base">Tipo</TableHead>
+                  <TableHead className="text-base">Status</TableHead>
+                  <TableHead className="text-base">Observação</TableHead>
                   {/* MODIFICADO: Cabeçalho 'Criado Em' agora é um botão clicável */}
                   <TableHead>
                     <Button
                       variant="ghost"
                       onClick={() => handleSort('createdAt')}
-                      className="px-1"
+                      className="px-1 text-base"
                     >
                       {/* Ajuste padding se necessário */}
                       Criado Em

@@ -417,7 +417,6 @@ export default function NewRequestPage() {
                           'border-destructive focus-visible:ring-destructive'
                       )}
                     >
-                      {' '}
                       {/* ZOD: Estilo erro */}
                       <SelectValue placeholder="Selecione o grupo de quem vai cobrir" />
                     </SelectTrigger>

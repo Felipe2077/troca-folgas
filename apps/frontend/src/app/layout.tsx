@@ -20,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className="h-full" suppressHydrationWarning>
       <body
-        className={`${inter.className} flex flex-col min-h-full bg-gradient-to-br from-[#111] via-[#212121] to-[#111]  flex-1 text-foreground`}
+        className={`${inter.className} flex flex-col min-h-full flex-1 text-foreground bg-[#131313]`}
       >
         <Providers>
           <main>{children}</main>
@@ -30,3 +30,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+// bg-gradient-to-br from-[#111] via-[#252525] to-[#111]

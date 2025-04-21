@@ -16,8 +16,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils'; // <-- ADICIONADO: Importa helper cn
 import { loginBodySchema, Role } from '@repo/shared-types';
 import { Loader2 } from 'lucide-react';
+import { Mukta } from 'next/font/google';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useState } from 'react'; // Import React e FormEvent
+import { FormEvent, useEffect, useState } from 'react'; // Import React e FormEvent
 import { toast } from 'sonner';
 import { z } from 'zod'; // Importa Zod
 
@@ -25,6 +27,49 @@ import { z } from 'zod'; // Importa Zod
 type FormattedErrors = z.ZodFormattedError<
   typeof loginBodySchema._input
 > | null;
+const mukta = Mukta({
+  weight: ['400', '700'],
+  style: ['normal'],
+  subsets: ['latin'],
+  display: 'swap',
+});
+
+const GlowCard = () => {
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+     @media (min-width: 768px) {
+      @keyframes pulseShadow {
+        0%, 100% {
+          box-shadow:
+            0 100px 300px rgba(255, 217, 0, 0.39),
+            0 50px 500px rgba(255, 234, 0, 0.11),
+            0 2px 900px rgba(255, 123, 0, 0.26),
+            0 7px 200px rgba(156, 128, 5, 0.21);
+        }
+        50% {
+          box-shadow:
+            0 100px 330px rgba(255, 217, 0, 0.6),
+            0 50px 500px rgba(255, 234, 0, 0.3),
+            0 2px 300px rgba(255, 123, 0, 0.45),
+            0 7px 200px rgba(156, 128, 5, 0.4);
+        }
+      }
+
+      .glow {
+        animation: pulseShadow 5s infinite ease-in-out;
+      }
+  }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style); // limpo o estilo quando desmontar
+    };
+  }, []);
+
+  return <div className="glow"></div>;
+};
 
 export default function LoginPage() {
   const [loginIdentifier, setLoginIdentifier] = useState('');
@@ -75,13 +120,32 @@ export default function LoginPage() {
     }
   };
 
+  const Saudacao = () => {
+    const hora = new Date().getHours();
+    const saudacao =
+      hora < 12 ? '☀️ Bom dia' : hora < 18 ? '🌤️ Boa tarde' : '🌙 Boa noite';
+
+    return (
+      <p className="md:text-base">{saudacao}! Faça seu login para continuar.</p>
+    );
+  };
+
   return (
-    <div className="flex justify-center items-center pt-10">
-      <Card className="w-full max-w-xl ">
-        <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
+    <div className="flex flex-col justify-center items-center pt-10">
+      <GlowCard />
+      <div className="flex items-center mb-10">
+        <Image alt="logo" src={'/logo.png'} width={92} height={92} />
+        <p className={`${mukta.className} mr-2 font-bold text-4xl`}>
+          Viação Pioneira
+        </p>
+      </div>
+      <Card className="w-full px-4 max-w-xl mb-4 glow sm:h-[600px] bg-[#191919]">
+        <CardHeader className=" text-center">
+          <CardTitle className={`${mukta.className} text-2xl md:text-4xl`}>
+            Acesse sua conta
+          </CardTitle>
           <CardDescription>
-            Entre com seu identificador e senha para acessar o sistema.
+            <Saudacao />
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
@@ -94,8 +158,8 @@ export default function LoginPage() {
                 </p>
               )}
             {/* Campo Identificador */}
-            <div className="grid gap-2">
-              <Label htmlFor="loginIdentifier" className="text-base">
+            <div className="grid gap-2 mt-10">
+              <Label htmlFor="loginIdentifier" className="md:text-base">
                 Identificador (Email/CPF)
               </Label>
               <Input
@@ -107,7 +171,7 @@ export default function LoginPage() {
                 onChange={(e) => setLoginIdentifier(e.target.value)}
                 disabled={isLoading}
                 className={cn(
-                  'h-14 placeholder:text-base',
+                  'md:h-14 ',
                   validationErrors?.loginIdentifier &&
                     'border-destructive focus-visible:ring-destructive'
                 )}
@@ -121,7 +185,7 @@ export default function LoginPage() {
             </div>
             {/* Campo Senha */}
             <div className="grid gap-2 mt-2 ">
-              <Label htmlFor="password" className="text-base">
+              <Label htmlFor="password" className="md:text-base">
                 Senha
               </Label>
               <Input
@@ -133,7 +197,7 @@ export default function LoginPage() {
                 disabled={isLoading}
                 // <-- ADICIONADO: Estilo condicional de erro -->
                 className={cn(
-                  'h-14',
+                  'md:h-14 ',
                   validationErrors?.password &&
                     'border-destructive focus-visible:ring-destructive'
                 )}
@@ -147,7 +211,15 @@ export default function LoginPage() {
             </div>
           </CardContent>
           <CardFooter>
-            <Button className="w-full mt-8" type="submit" disabled={isDisabled}>
+            <Button
+              className="w-full mt-8 h-12 text-base"
+              style={{
+                backgroundImage:
+                  'linear-gradient(to right, #75D6FF 0%, #D2FFC1 38%, #EDFF40 74%, #FAFF00 91%)',
+              }}
+              type="submit"
+              disabled={isDisabled}
+            >
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Entrando...
