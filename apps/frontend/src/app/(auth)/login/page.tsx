@@ -42,17 +42,17 @@ const GlowCard = () => {
       @keyframes pulseShadow {
         0%, 100% {
           box-shadow:
-            0 100px 300px rgba(255, 217, 0, 0.39),
-            0 50px 500px rgba(255, 234, 0, 0.11),
-            0 2px 900px rgba(255, 123, 0, 0.26),
-            0 7px 200px rgba(156, 128, 5, 0.21);
+         0 0 30px rgba(255, 217, 0, 0.29),
+         0 0 20px rgba(255, 234, 0, 0.19),
+         0 0 12px rgba(255, 123, 0, 0.19),
+         0 0 7px rgba(156, 128, 5, 0.3);
         }
         50% {
           box-shadow:
-            0 100px 330px rgba(255, 217, 0, 0.6),
-            0 50px 500px rgba(255, 234, 0, 0.3),
-            0 2px 300px rgba(255, 123, 0, 0.45),
-            0 7px 200px rgba(156, 128, 5, 0.4);
+        0 0 50px rgba(255, 217, 0, 0.55),
+        0 0 45px rgba(255, 234, 0, 0.35),
+        0 0 25px rgba(255, 123, 0, 0.45),
+        0 0 19px rgba(156, 128, 5, 0.6);
         }
       }
 
@@ -131,106 +131,114 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex flex-col justify-center items-center pt-10">
-      <GlowCard />
-      <div className="flex items-center mb-10">
-        <Image alt="logo" src={'/logo.png'} width={92} height={92} />
-        <p className={`${mukta.className} mr-2 font-bold text-4xl`}>
-          Viação Pioneira
-        </p>
-      </div>
-      <Card className="w-full px-4 max-w-xl mb-4 glow sm:h-[600px] bg-[#191919]">
-        <CardHeader className=" text-center">
-          <CardTitle className={`${mukta.className} text-2xl md:text-4xl`}>
-            Acesse sua conta
-          </CardTitle>
-          <CardDescription>
-            <Saudacao />
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="grid gap-4">
-            {/* Exibe erro GERAL da API, se houver */}
-            {apiError &&
-              !validationErrors && ( // Só mostra se não houver erro de validação Zod
-                <p className="text-sm font-medium text-destructive">
-                  {apiError}
-                </p>
-              )}
-            {/* Campo Identificador */}
-            <div className="grid gap-2 mt-10">
-              <Label htmlFor="loginIdentifier" className="md:text-base">
-                Identificador (Email/CPF)
-              </Label>
-              <Input
-                id="loginIdentifier"
-                type="text"
-                placeholder="Digite o CPF"
-                required
-                value={loginIdentifier}
-                onChange={(e) => setLoginIdentifier(e.target.value)}
-                disabled={isLoading}
-                className={cn(
-                  'md:h-14 ',
-                  validationErrors?.loginIdentifier &&
-                    'border-destructive focus-visible:ring-destructive'
-                )}
-              />
-              {/* <-- ADICIONADO: Exibe erro específico do Zod para este campo --> */}
-              {validationErrors?.loginIdentifier?._errors && (
-                <p className="text-sm font-medium text-destructive">
-                  {validationErrors.loginIdentifier._errors[0]}
-                </p>
-              )}
-            </div>
-            {/* Campo Senha */}
-            <div className="grid gap-2 mt-2 ">
-              <Label htmlFor="password" className="md:text-base">
-                Senha
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
-                // <-- ADICIONADO: Estilo condicional de erro -->
-                className={cn(
-                  'md:h-14 ',
-                  validationErrors?.password &&
-                    'border-destructive focus-visible:ring-destructive'
-                )}
-              />
-              {/* <-- ADICIONADO: Exibe erro específico do Zod para este campo --> */}
-              {validationErrors?.password?._errors && (
-                <p className="text-sm font-medium text-destructive">
-                  {validationErrors.password._errors[0]}
-                </p>
-              )}
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button
-              className="w-full mt-8 h-12 text-base"
-              style={{
-                backgroundImage:
-                  'linear-gradient(to right, #75D6FF 0%, #D2FFC1 38%, #EDFF40 74%, #FAFF00 91%)',
-              }}
-              type="submit"
-              disabled={isDisabled}
+    <div className="relative min-h-screen w-full">
+      <div
+        className="absolute inset-0 -z-10 h-full w-full bg-[url('/bg-login2.png')] "
+        aria-hidden="true"
+      />
+      <div className="flex flex-col justify-center items-center pt-10 ">
+        <div className="flex items-center mb-10">
+          <Image alt="logo" src={'/logo.png'} width={92} height={92} />
+          <p className={`${mukta.className} mr-2 font-bold text-4xl`}>
+            Viação Pioneira
+          </p>
+        </div>
+        <Card className="w-full md:px-4 max-w-xl mb-4 glow  h-[450px] md:h-[550px] bg-[#191919]">
+          <CardHeader className=" text-center">
+            <CardTitle
+              className={`${mukta.className} text-2xl md:text-4xl mt-4`}
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Entrando...
-                </>
-              ) : (
-                'Entrar'
-              )}
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
+              Acesse sua conta
+            </CardTitle>
+            <CardDescription>
+              <Saudacao />
+            </CardDescription>
+          </CardHeader>
+          <form onSubmit={handleSubmit}>
+            <CardContent className="grid gap-4">
+              {/* Exibe erro GERAL da API, se houver */}
+              {apiError &&
+                !validationErrors && ( // Só mostra se não houver erro de validação Zod
+                  <p className="text-sm font-medium text-destructive">
+                    {apiError}
+                  </p>
+                )}
+              {/* Campo Identificador */}
+              <div className="grid gap-2 mt-10">
+                <Label htmlFor="loginIdentifier" className="md:text-base">
+                  Identificador (Email/CPF)
+                </Label>
+                <Input
+                  id="loginIdentifier"
+                  type="text"
+                  placeholder="Digite o CPF"
+                  required
+                  value={loginIdentifier}
+                  onChange={(e) => setLoginIdentifier(e.target.value)}
+                  disabled={isLoading}
+                  className={cn(
+                    'md:h-14 mb-2',
+                    validationErrors?.loginIdentifier &&
+                      'border-destructive focus-visible:ring-destructive'
+                  )}
+                />
+                {/* <-- ADICIONADO: Exibe erro específico do Zod para este campo --> */}
+                {validationErrors?.loginIdentifier?._errors && (
+                  <p className="text-sm font-medium text-destructive">
+                    {validationErrors.loginIdentifier._errors[0]}
+                  </p>
+                )}
+              </div>
+              {/* Campo Senha */}
+              <div className="grid gap-2 mt-2 ">
+                <Label htmlFor="password" className="md:text-base">
+                  Senha
+                </Label>
+                <Input
+                  id="password"
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoading}
+                  // <-- ADICIONADO: Estilo condicional de erro -->
+                  className={cn(
+                    'md:h-14 ',
+                    validationErrors?.password &&
+                      'border-destructive focus-visible:ring-destructive'
+                  )}
+                />
+                {/* <-- ADICIONADO: Exibe erro específico do Zod para este campo --> */}
+                {validationErrors?.password?._errors && (
+                  <p className="text-sm font-medium text-destructive">
+                    {validationErrors.password._errors[0]}
+                  </p>
+                )}
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button
+                className="w-full mt-10 h-12 text-base"
+                style={{
+                  backgroundImage:
+                    'linear-gradient(to right, #75D6FF 0%, #D2FFC1 38%, #EDFF40 74%, #FAFF00 91%)',
+                }}
+                type="submit"
+                disabled={isDisabled}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />{' '}
+                    Entrando...
+                  </>
+                ) : (
+                  'Entrar'
+                )}
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
+      </div>
     </div>
   );
 }
