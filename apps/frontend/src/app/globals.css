@@ -129,3 +129,29 @@
     transition: background-color 9999s ease-in-out 0s;
   }
 }
+login-page-bg {
+  /* ADICIONA o linear-gradient ANTES do image-set */
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.9)),
+    /* Imagem responsiva mobile (WebP com fallback PNG) */
+      image-set(
+        url('/login-bg-mobile.webp') type('image/webp'),
+        url('/login-bg-mobile.png') type('image/png')
+      );
+  /* background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat; */
+}
+
+/* Para telas maiores (ex: a partir de 768px), usa a imagem maior */
+@media (min-width: 768px) {
+  /* Ajuste o breakpoint se necessário */
+  .login-page-bg {
+    background-image:
+      linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.9)),
+      image-set(
+        /* Prioriza WebP maior url('/bg-login.webp') type('image/webp'), */
+          /* Fallback PNG maior */ url('/bg-login2.png') type('image/png')
+      );
+  }
+}

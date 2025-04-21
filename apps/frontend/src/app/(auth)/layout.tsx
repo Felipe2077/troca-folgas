@@ -10,8 +10,10 @@ export default function AuthLayout({
   // para todas as páginas de autenticação, ou só renderizar children.
   // Vamos manter simples por enquanto:
   return (
-    <div className={`flex flex-col min-h-full bg-gradient-to-br`}>
-      <main className="flex-grow container mx-auto p-4 py-6 ">{children}</main>
+    <div className={`flex flex-col h-full bg-gradient-to-br w-full `}>
+      <main className="flex-grow  mx-auto p-4 py-6 h-screen w-full login-page-bg">
+        {children}
+      </main>
     </div>
   );
 }

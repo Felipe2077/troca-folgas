@@ -131,9 +131,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen w-full">
+    <div className="relative h-full w-full">
       <div
-        className="absolute inset-0 -z-10 h-full w-full bg-[url('/bg-login2.png')] "
+        className="absolute inset-0 -z-10 h-full w-full "
         aria-hidden="true"
       />
       <div className="flex flex-col justify-center items-center pt-10 ">

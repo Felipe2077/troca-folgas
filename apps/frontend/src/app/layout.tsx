@@ -23,7 +23,7 @@ export default function RootLayout({
         className={`${inter.className} flex flex-col min-h-full flex-1 text-foreground bg-[#131313]`}
       >
         <Providers>
-          <main>{children}</main>
+          <main className="">{children}</main>
           <Toaster richColors position="top-center" />
         </Providers>
       </body>
