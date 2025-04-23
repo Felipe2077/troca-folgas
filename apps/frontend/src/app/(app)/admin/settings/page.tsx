@@ -265,11 +265,14 @@ export default function SettingsPage() {
               )}
             </CardContent>
             <CardFooter>
-              <Button type="submit" disabled={updateSettingsMutation.isPending}>
+              <Button
+                className="mt-5"
+                type="submit"
+                disabled={updateSettingsMutation.isPending}
+              >
                 {updateSettingsMutation.isPending ? (
                   <>
-                    {' '}
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />{' '}
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Salvando...{' '}
                   </>
                 ) : (

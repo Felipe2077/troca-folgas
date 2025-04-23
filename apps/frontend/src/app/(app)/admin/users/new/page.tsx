@@ -166,7 +166,7 @@ export default function CreateUserPage() {
             </div>
 
             {/* Campo Identificador Login */}
-            <div className="grid gap-1.5">
+            <div className="grid gap-1.5 my-5">
               <Label htmlFor="loginIdentifier">
                 Identificador Login (Email/CPF/Matrícula)
               </Label>

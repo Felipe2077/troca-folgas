@@ -125,9 +125,7 @@ export default function LoginPage() {
     const saudacao =
       hora < 12 ? '☀️ Bom dia' : hora < 18 ? '🌤️ Boa tarde' : '🌙 Boa noite';
 
-    return (
-      <p className="md:text-base">{saudacao}! Faça seu login para continuar.</p>
-    );
+    return <p className="">{saudacao}! Faça seu login para continuar.</p>;
   };
 
   return (
@@ -143,10 +141,10 @@ export default function LoginPage() {
             Viação Pioneira
           </p>
         </div>
-        <Card className="w-full md:px-4 max-w-xl mb-4 glow  h-[450px] md:h-[550px] bg-[#191919]">
+        <Card className="w-full md:px-4 max-w-xl mb-4 glow  h-[450px] md:h-[500px] bg-[#191919]">
           <CardHeader className=" text-center">
             <CardTitle
-              className={`${mukta.className} text-2xl md:text-4xl mt-4`}
+              className={`${mukta.className} text-2xl md:text-2xl mt-4`}
             >
               Acesse sua conta
             </CardTitle>
@@ -177,7 +175,7 @@ export default function LoginPage() {
                   onChange={(e) => setLoginIdentifier(e.target.value)}
                   disabled={isLoading}
                   className={cn(
-                    'md:h-14 mb-2',
+                    ' mb-2',
                     validationErrors?.loginIdentifier &&
                       'border-destructive focus-visible:ring-destructive'
                   )}
@@ -203,7 +201,7 @@ export default function LoginPage() {
                   disabled={isLoading}
                   // <-- ADICIONADO: Estilo condicional de erro -->
                   className={cn(
-                    'md:h-14 ',
+                    ' ',
                     validationErrors?.password &&
                       'border-destructive focus-visible:ring-destructive'
                   )}
@@ -218,7 +216,7 @@ export default function LoginPage() {
             </CardContent>
             <CardFooter>
               <Button
-                className="w-full mt-10 h-12 text-base"
+                className="w-full mt-10  text-base"
                 style={{
                   backgroundImage:
                     'linear-gradient(to right, #75D6FF 0%, #D2FFC1 38%, #EDFF40 74%, #FAFF00 91%)',
