@@ -268,16 +268,16 @@ export default function AdminDashboardPage() {
               <TableHeader className="bg-stone-800">
                 <TableRow>
                   {/* Cabeçalhos - MODIFICADO 'Criado Em' */}
-                  <TableHead className="w-[50px] text-base">ID</TableHead>
-                  <TableHead className="text-base">Sai (Crachá)</TableHead>
-                  <TableHead className="text-base">Entra (Crachá)</TableHead>
-                  <TableHead className="text-base">Função</TableHead>
-                  <TableHead className="text-base">Data Troca</TableHead>
+                  <TableHead className="w-[50px] ">ID</TableHead>
+                  <TableHead>Sai (Crachá)</TableHead>
+                  <TableHead>Entra (Crachá)</TableHead>
+                  <TableHead>Função</TableHead>
+                  <TableHead>Data Troca</TableHead>
                   {/* TODO: Tornar clicável depois */}
-                  <TableHead className="text-base">Data Pagamento</TableHead>
-                  <TableHead className="text-base">Tipo</TableHead>
-                  <TableHead className="text-base">Status</TableHead>
-                  <TableHead className="text-base">Observação</TableHead>
+                  <TableHead>Data Pagamento</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Observação</TableHead>
                   {/* MODIFICADO: Cabeçalho 'Criado Em' agora é um botão clicável */}
                   <TableHead>
                     <Button
@@ -305,7 +305,7 @@ export default function AdminDashboardPage() {
               </TableHeader>
               <TableBody>
                 {/* Mapeamento dos dados (sem alteração aqui) */}
-                {requests.map((req) => (
+                {requests.map((req: SwapRequest) => (
                   <TableRow key={req.id}>
                     <TableCell className="font-medium">{req.id}</TableCell>
                     <TableCell>{req.employeeIdOut}</TableCell>

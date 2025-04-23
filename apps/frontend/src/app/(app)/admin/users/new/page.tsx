@@ -251,9 +251,8 @@ export default function CreateUserPage() {
             <Button type="submit" disabled={isDisabled}>
               {createUserMutation.isPending ? (
                 <>
-                  {' '}
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />{' '}
-                  Criando...{' '}
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Criando...
                 </>
               ) : (
                 'Criar Usuário'
