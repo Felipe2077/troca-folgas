@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { authenticate } from '../hooks/authenticate.hook.js'; // Importa o hook compartilhado
 import { comparePassword, hashPassword } from '../lib/hash.js'; // Importa comparePassword
 import { prisma } from '../lib/prisma.js'; // Importa prisma
-import { loginBodySchema, registerBodySchema } from '../schemas/auth.schema.js'; // <-- NOVO IMPORT
+import { loginBodySchema, registerBodySchema } from '../schemas/auth.schema.js'; //
 
 declare module '@fastify/jwt' {
   // Interface para estender/definir tipos dentro do @fastify/jwt
