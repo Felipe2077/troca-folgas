@@ -232,16 +232,24 @@ export type RegisterInput = z.infer<typeof registerBodySchema>;
 
 export const swapRequestUpdateSchema = z
   .object({
-    // Ambos opcionais, mas se enviados, devem ser válidos
-    observation: z.string().nullable().optional(),
-    status: z.nativeEnum(SwapStatus).optional(),
+    status: z
+      .nativeEnum(SwapStatus, {
+        invalid_type_error: 'Status inválido.',
+      })
+      .optional(), // Status é opcional
+    observation: z
+      .string({
+        invalid_type_error: 'Observação deve ser texto.',
+      })
+      .nullable()
+      .optional(), // Observação é opcional (pode ser string ou null)
   })
   // Garante que pelo menos um campo seja enviado para update
   .refine(
-    (data) => data.observation !== undefined || data.status !== undefined,
+    (data) => data.status !== undefined || data.observation !== undefined,
     {
       message:
-        "Pelo menos 'observation' ou 'status' deve ser fornecido para atualização.",
+        "É necessário fornecer 'status' ou 'observation' para atualizar.",
     }
   );
 export type SwapRequestUpdateInput = z.infer<typeof swapRequestUpdateSchema>;

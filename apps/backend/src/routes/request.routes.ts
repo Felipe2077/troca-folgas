@@ -1,12 +1,9 @@
 // apps/backend/src/routes/request.routes.ts
-import {
-  DayOfWeek,
-  Prisma,
-  Role,
-  SwapEventType,
-  SwapStatus,
-} from '@prisma/client';
+import { DayOfWeek, Prisma, SwapEventType } from '@prisma/client';
+
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { Role, swapRequestUpdateSchema, SwapStatus } from '@repo/shared-types'; // Importa o novo schema e SwapStatus
+
 import { swapRequestCreateBodySchema /* ... */ } from '@repo/shared-types';
 import { getISOWeek } from 'date-fns'; // Helpers de data
 import { FastifyInstance } from 'fastify';
@@ -17,7 +14,6 @@ import { prisma } from '../lib/prisma.js';
 import {
   requestIdParamsSchema,
   requestListQuerySchema,
-  requestUpdateObservationBodySchema,
 } from '../schemas/request.schema.js'; // Nosso schema Zod
 
 // Helper para verificar se é Sábado ou Domingo
@@ -286,54 +282,84 @@ export async function requestRoutes(fastify: FastifyInstance) {
   );
   // --- Rota PATCH para atualizar a observação (ADMIN) ---
   fastify.patch(
-    '/:id', // Captura o ID da URL
+    '/:id', // Rota unificada para atualizar status e/ou observação
     {
-      onRequest: [authenticate], // Precisa estar autenticado
+      onRequest: [authenticate], // Admin Only
     },
     async (request, reply) => {
       try {
-        // 1. Verificar Role (Só Admin pode atualizar)
+        // 1. Verificar Role Admin
         if (request.user.role !== Role.ADMINISTRADOR) {
-          return reply.status(403).send({
-            message:
-              'Acesso negado. Apenas administradores podem atualizar solicitações.',
-          });
+          return reply.status(403).send({ message: 'Acesso negado.' });
         }
 
-        // 2. Validar Parâmetro da Rota (ID)
+        // 2. Validar Parâmetro ID da URL
         const paramsParse = requestIdParamsSchema.safeParse(request.params);
         if (!paramsParse.success) {
           return reply.status(400).send({
-            message: 'ID inválido na URL.',
+            message: 'ID inválido.',
             issues: paramsParse.error.format(),
           });
         }
         const { id } = paramsParse.data;
 
-        // 3. Validar Corpo da Requisição (Observação)
-        const bodyParse = requestUpdateObservationBodySchema.safeParse(
-          request.body
-        );
+        // 3. Validar Corpo da Requisição (com schema flexível)
+        const bodyParse = swapRequestUpdateSchema.safeParse(request.body);
         if (!bodyParse.success) {
           return reply.status(400).send({
-            message: 'Dados inválidos no corpo da requisição.',
+            message: 'Dados inválidos.',
             issues: bodyParse.error.format(),
           });
         }
-        const { observation } = bodyParse.data;
+        // bodyParse.data contém { status?: ..., observation?: ... }
+        const validatedData = bodyParse.data;
 
-        // 4. Atualizar no Banco de Dados
+        // 4. Construir objeto de dados para o Prisma APENAS com os campos fornecidos
+        const dataToUpdate: Prisma.SwapRequestUpdateInput = {};
+        let actionDetail = ''; // Para log de auditoria
+
+        if (validatedData.status !== undefined) {
+          dataToUpdate.status = validatedData.status;
+          actionDetail += `Status set to ${validatedData.status}. `;
+        }
+        if (validatedData.observation !== undefined) {
+          dataToUpdate.observation = validatedData.observation; // Permite null
+          actionDetail += `Observation set to: ${validatedData.observation ? `"${validatedData.observation}"` : 'null'}.`;
+        }
+
+        // 5. Atualizar no Banco
+        // Usamos findUnique primeiro para garantir que existe antes de logar/atualizar
+        const existingRequest = await prisma.swapRequest.findUnique({
+          where: { id },
+        });
+        if (!existingRequest) {
+          return reply
+            .status(404)
+            .send({ message: 'Solicitação não encontrada.' });
+        }
+
         const updatedRequest = await prisma.swapRequest.update({
           where: { id: id },
-          data: {
-            observation: observation, // Atualiza APENAS a observação
-            // updatedAt será atualizado automaticamente pelo Prisma
-          },
+          data: dataToUpdate,
         });
-        // 5. Log de Auditoria
+
+        // 6. Log de Auditoria Dinâmico
+        let auditAction = 'UPDATE_REQUEST_DATA'; // Ação genérica se ambos mudarem
+        if (
+          validatedData.status !== undefined &&
+          validatedData.observation === undefined
+        ) {
+          auditAction = 'UPDATE_REQUEST_STATUS';
+        } else if (
+          validatedData.status === undefined &&
+          validatedData.observation !== undefined
+        ) {
+          auditAction = 'UPDATE_REQUEST_OBSERVATION';
+        }
+
         try {
-          // Opcional: try/catch para busca do admin
-          const actingAdminObs = await prisma.user.findUnique({
+          // Busca dados do admin para o log
+          const actingAdmin = await prisma.user.findUnique({
             where: { id: parseInt(request.user.sub, 10) },
             select: { loginIdentifier: true },
           });
@@ -341,9 +367,9 @@ export async function requestRoutes(fastify: FastifyInstance) {
             prisma,
             userId: parseInt(request.user.sub, 10),
             userLoginIdentifier:
-              actingAdminObs?.loginIdentifier ?? `AdminID:${request.user.sub}`,
-            action: 'UPDATE_REQUEST_OBSERVATION',
-            details: `Observation for request ${updatedRequest.id} set to: ${updatedRequest.observation ? `"${updatedRequest.observation}"` : 'null'}`,
+              actingAdmin?.loginIdentifier ?? `AdminID:${request.user.sub}`,
+            action: auditAction,
+            details: actionDetail.trim(),
             targetResourceId: updatedRequest.id,
             targetResourceType: 'SwapRequest',
           });
@@ -354,109 +380,33 @@ export async function requestRoutes(fastify: FastifyInstance) {
           });
         }
 
-        // 6. Retornar sucesso com a solicitação atualizada
+        // 7. Retornar sucesso
         return reply.status(200).send({ request: updatedRequest });
       } catch (error) {
-        // Tratamento de Erro Específico do Prisma (Ex: ID não encontrado)
-        if (error instanceof PrismaClientKnownRequestError) {
-          if (error.code === 'P2025') {
-            return reply
-              .status(404)
-              .send({ message: 'Solicitação não encontrada.' });
-          }
-        }
-        // Tratamento de erro Zod (embora safeParse deva pegar antes)
+        // Tratamento de erro (similar ao anterior, mas P2025 foi tratado acima)
         if (error instanceof ZodError) {
+          // Segurança extra
           return reply.status(400).send({
-            message: 'Erro de validação.',
+            message: 'Erro de validação Zod.',
             issues: error.format(),
           });
         }
-        // Log e erro genérico para outros problemas
-        fastify.log.error(error);
-        return reply.status(500).send({
-          message: 'Erro interno do servidor ao atualizar observação.',
+        if (
+          error instanceof PrismaClientKnownRequestError &&
+          error.code === 'P2025'
+        ) {
+          // Não deve mais acontecer por causa do findUnique antes, mas por segurança
+          return reply.status(404).send({
+            message: 'Solicitação não encontrada (erro P2025 inesperado).',
+          });
+        }
+        fastify.log.error({
+          msg: 'Internal error on PATCH /requests/:id',
+          error,
         });
-      }
-    }
-  );
-  // --- Rota PATCH para marcar como NÃO REALIZADA (ADMIN) ---
-  fastify.patch(
-    '/:id/status', // Rota específica para mudar o status
-    {
-      onRequest: [authenticate], // Precisa estar autenticado
-    },
-    async (request, reply) => {
-      try {
-        // 1. Verificar Role (Só Admin pode fazer isso)
-        if (request.user.role !== Role.ADMINISTRADOR) {
-          return reply.status(403).send({
-            message:
-              'Acesso negado. Apenas administradores podem alterar o status.',
-          });
-        }
-
-        // 2. Validar Parâmetro da Rota (ID)
-        const paramsParse = requestIdParamsSchema.safeParse(request.params);
-        if (!paramsParse.success) {
-          return reply.status(400).send({
-            message: 'ID inválido na URL.',
-            issues: paramsParse.error.format(),
-          });
-        }
-        const { id } = paramsParse.data;
-
-        // 3. Atualizar o Status no Banco de Dados
-        // Não precisamos de dados do corpo, o status é fixo
-        const updatedRequest = await prisma.swapRequest.update({
-          where: { id: id },
-          data: {
-            status: SwapStatus.NAO_REALIZADA, // Define o status diretamente
-          },
-        });
-        //  Log de Auditoria
-        try {
-          const actingAdminStatus = await prisma.user.findUnique({
-            where: { id: parseInt(request.user.sub, 10) },
-            select: { loginIdentifier: true },
-          });
-          await logAudit({
-            prisma,
-            userId: parseInt(request.user.sub, 10),
-            userLoginIdentifier:
-              actingAdminStatus?.loginIdentifier ??
-              `AdminID:${request.user.sub}`,
-            action: 'UPDATE_REQUEST_STATUS',
-            details: `Status for request ${updatedRequest.id} set to ${SwapStatus.NAO_REALIZADA}`,
-            targetResourceId: updatedRequest.id,
-            targetResourceType: 'SwapRequest',
-          });
-        } catch (logError) {
-          fastify.log.error({
-            msg: 'Failed to fetch admin details for audit log on PATCH /:id/status',
-            error: logError,
-          });
-        }
-
-        // 4. Retornar sucesso com a solicitação atualizada
-        return reply.status(200).send({ request: updatedRequest });
-      } catch (error) {
-        // Trata erro se a solicitação com o ID não for encontrada
-        if (error instanceof PrismaClientKnownRequestError) {
-          if (error.code === 'P2025') {
-            console.error(
-              `[API PATCH /requests/:id/status] Registro com ID ${(request.params as any)?.id} não encontrado (P2025).`
-            );
-            return reply
-              .status(404)
-              .send({ message: 'Solicitação não encontrada.' });
-          }
-        }
-        // Outros erros
-        fastify.log.error(error);
         return reply
           .status(500)
-          .send({ message: 'Erro interno do servidor ao atualizar status.' });
+          .send({ message: 'Erro interno ao atualizar solicitação.' });
       }
     }
   );
