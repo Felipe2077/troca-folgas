@@ -2,7 +2,12 @@
 import { DayOfWeek, Prisma, SwapEventType } from '@prisma/client';
 
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
-import { Role, swapRequestUpdateSchema, SwapStatus } from '@repo/shared-types'; // Importa o novo schema e SwapStatus
+import {
+  requestListQuerySchema,
+  Role,
+  swapRequestUpdateSchema,
+  SwapStatus,
+} from '@repo/shared-types'; // Importa o novo schema e SwapStatus
 
 import { swapRequestCreateBodySchema /* ... */ } from '@repo/shared-types';
 import { getISOWeek } from 'date-fns'; // Helpers de data
@@ -11,10 +16,7 @@ import { ZodError } from 'zod';
 import { authenticate } from '../hooks/authenticate.hook.js'; // Nosso hook de auth
 import { logAudit } from '../lib/audit.js';
 import { prisma } from '../lib/prisma.js';
-import {
-  requestIdParamsSchema,
-  requestListQuerySchema,
-} from '../schemas/request.schema.js'; // Nosso schema Zod
+import { requestIdParamsSchema } from '../schemas/request.schema.js'; // Nosso schema Zod
 
 // Helper para verificar se é Sábado ou Domingo
 function isWeekend(date: Date): boolean {
@@ -33,56 +35,106 @@ function areDatesInSameISOWeek(date1: Date, date2: Date): boolean {
 }
 
 export async function requestRoutes(fastify: FastifyInstance) {
-  fastify.get(
-    '/', // Usará o prefixo '/api/requests' definido em server.ts
-    { onRequest: [authenticate] },
-    async (request, reply) => {
-      try {
-        // 1. Verificar Role (continua igual)
-        if (request.user.role !== Role.ADMINISTRADOR) {
-          /* ... */
-        }
+  fastify.get('/', { onRequest: [authenticate] }, async (request, reply) => {
+    try {
+      // 1. Verificar Role Admin (mantido)
+      if (request.user.role !== Role.ADMINISTRADOR) {
+        return reply.status(403).send({ message: 'Acesso negado.' });
+      }
 
-        // 2. Validar Query Parameters (agora inclui sortBy/sortOrder)
-        const queryParse = requestListQuerySchema.safeParse(request.query);
-        if (!queryParse.success) {
-          return reply.status(400).send({
-            /* ... */
-          });
-        }
-        // Pega os valores validados (com defaults se não passados)
-        const { status: statusFilter, sortBy, sortOrder } = queryParse.data;
+      // 2. Validar TODOS os Query Parameters com o schema compartilhado
+      const queryParse = requestListQuerySchema.safeParse(request.query);
+      console.log('--- Parsed Query Params ---');
+      console.dir(queryParse, { depth: null }); // Mostra o resultado completo do parse
 
-        // 3. Construir Cláusula Where (continua igual)
-        const whereClause: { status?: SwapStatus } = {};
-        if (statusFilter) {
-          whereClause.status = statusFilter;
-        }
-
-        // 4. Construir Cláusula OrderBy (NOVO)
-        // Cria o objeto orderBy dinamicamente: { [nomeDaColuna]: 'asc' | 'desc' }
-        const orderByClause = {
-          [sortBy || 'createdAt']: sortOrder || 'desc', // Usa defaults se não vier na query
-        };
-
-        // 5. Buscar Solicitações no Banco (MODIFICADO para incluir orderBy)
-        const requests = await prisma.swapRequest.findMany({
-          where: whereClause,
-          orderBy: orderByClause, // <--- USA A CLÁUSULA ORDER BY
-          // include: { ... }
-        });
-
-        // 6. Retornar a lista (filtrada e ordenada)
-        return reply.status(200).send({ requests });
-      } catch (error) {
-        // Tratamento de erro continua igual
-        fastify.log.error(error);
-        return reply.status(500).send({
-          message: 'Erro interno do servidor ao buscar solicitações.',
+      if (!queryParse.success) {
+        return reply.status(400).send({
+          message: 'Parâmetros de query inválidos.',
+          issues: queryParse.error.format(),
         });
       }
+      // Extrai todos os possíveis filtros e ordenação validados
+      const {
+        status,
+        sortBy,
+        sortOrder,
+        startDate,
+        endDate,
+        employeeIdOut,
+        employeeIdIn,
+        employeeFunction,
+        groupOut,
+        groupIn,
+        eventType,
+      } = queryParse.data;
+
+      // 3. Construir Cláusula Where Dinamicamente
+      const whereClause: Prisma.SwapRequestWhereInput = {};
+
+      if (status) {
+        whereClause.status = status;
+      }
+      if (employeeIdOut) {
+        whereClause.employeeIdOut = employeeIdOut;
+      } // Busca exata por crachá
+      if (employeeIdIn) {
+        whereClause.employeeIdIn = employeeIdIn;
+      }
+      if (employeeFunction) {
+        whereClause.employeeFunction = employeeFunction;
+      }
+      if (groupOut) {
+        whereClause.groupOut = groupOut;
+      }
+      if (groupIn) {
+        whereClause.groupIn = groupIn;
+      }
+      if (eventType) {
+        whereClause.eventType = eventType;
+      }
+
+      // Filtro de Data (campo createdAt)
+      if (startDate || endDate) {
+        whereClause.createdAt = {};
+        if (startDate) {
+          const start = new Date(startDate); // Garante que é Date
+          start.setHours(0, 0, 0, 0); // Início do dia
+          whereClause.createdAt.gte = start;
+        }
+        if (endDate) {
+          const end = new Date(endDate); // Garante que é Date
+          end.setHours(23, 59, 59, 999); // Fim do dia
+          whereClause.createdAt.lte = end;
+        }
+      }
+      // TODO: Adicionar where para isMirror? Ou sempre mostrar ambos? Por enquanto mostra ambos.
+
+      // 4. Construir Cláusula OrderBy (mantida)
+      const orderByClause = { [sortBy || 'createdAt']: sortOrder || 'desc' };
+
+      // 5. Buscar Solicitações no Banco com Filtros e Ordenação
+      const requests = await prisma.swapRequest.findMany({
+        where: whereClause, // <-- Where dinâmico
+        orderBy: orderByClause,
+        // include: { submittedBy: { select: { name: true }} } // Exemplo se quiser nome
+      });
+
+      // 6. Retornar a lista filtrada e ordenada
+      return reply.status(200).send({ requests });
+    } catch (error) {
+      // Tratamento de erro (mantido)
+      if (error instanceof ZodError) {
+        // Segurança extra para Zod
+        return reply
+          .status(400)
+          .send({ message: 'Erro de validação Zod.', issues: error.format() });
+      }
+      fastify.log.error({ msg: 'Error fetching requests', error });
+      return reply
+        .status(500)
+        .send({ message: 'Erro interno ao buscar solicitações.' });
     }
-  );
+  });
   fastify.post(
     '/',
     {
