@@ -33,6 +33,7 @@ export type SwapEventType = (typeof SwapEventType)[keyof typeof SwapEventType];
 export const SwapStatus = {
   AGENDADO: 'AGENDADO',
   NAO_REALIZADA: 'NAO_REALIZADA',
+  REALIZADO: 'REALIZADO',
 } as const;
 export type SwapStatus = (typeof SwapStatus)[keyof typeof SwapStatus];
 
@@ -61,6 +62,8 @@ export interface SwapRequest {
   status: SwapStatus;
   observation: string | null;
   submittedById: number;
+  isMirror?: boolean | null;
+  relatedRequestId?: number | null;
   createdAt: Date | string;
   updatedAt: Date | string;
 }
@@ -77,11 +80,12 @@ export interface Settings {
 // Login
 export const loginBodySchema = z.object({
   loginIdentifier: z
-    .string({ required_error: 'Identificador é obrigatório.' })
-    .min(1, 'Identificador não pode ser vazio.'),
+    .string({ required_error: 'Crachá é obrigatório.' })
+    .trim()
+    .regex(/^[0-9]+$/, 'Crachá inválido.'), // Mensagem genérica
   password: z
     .string({ required_error: 'Senha é obrigatória.' })
-    .min(6, 'Senha precisa ter no mínimo 6 caracteres'),
+    .min(6, 'Senha inválida'), // Mensagem genérica
 });
 export type LoginInput = z.infer<typeof loginBodySchema>;
 
@@ -173,7 +177,20 @@ export const swapRequestCreateBodySchema = z
         path: ['paybackDate'],
       });
     }
+    // *** Regra 4: Mesmo Mês ***
+    if (
+      data.swapDate &&
+      data.paybackDate &&
+      data.swapDate.getMonth() !== data.paybackDate.getMonth()
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Troca deve ocorrer dentro do mesmo mês.',
+        path: ['paybackDate'],
+      }); // Ou path geral?
+    }
   });
+
 export type SwapRequestInput = z.infer<typeof swapRequestCreateBodySchema>;
 
 // Atualização de Settings (AGORA COMPLETO)
@@ -201,19 +218,75 @@ export type PublicUser = {
 
 // Schema Zod para registro (usado no backend e agora no frontend)
 export const registerBodySchema = z.object({
-  name: z
-    .string({ required_error: 'Nome é obrigatório.' })
-    .trim()
-    .min(3, 'Nome precisa ter no mínimo 3 caracteres.'),
+  name: z.string().trim().min(3, 'Nome precisa ter no mínimo 3 caracteres.'),
   loginIdentifier: z
-    .string({ required_error: 'Identificador é obrigatório.' })
+    .string({ required_error: 'Crachá é obrigatório.' })
     .trim()
-    .min(1, 'Identificador não pode ser vazio.'), // Pode adicionar .email() ou outra validação aqui se quiser
-  password: z
-    .string({ required_error: 'Senha é obrigatória.' })
-    .min(6, 'Senha precisa ter no mínimo 6 caracteres.'),
-  role: z.nativeEnum(Role, {
-    required_error: 'Cargo é obrigatório.',
-    invalid_type_error: 'Cargo inválido.',
-  }),
+    .regex(/^[0-9]+$/, 'Crachá deve conter apenas números.')
+    .min(5, 'Crachá deve ter entre 5 e 6 dígitos.')
+    .max(6, 'Crachá deve ter entre 5 e 6 dígitos.'),
+  password: z.string().min(6, 'Senha precisa ter no mínimo 6 caracteres'),
+  role: z.nativeEnum(Role, { required_error: 'Cargo é obrigatório.' }),
 });
+export type RegisterInput = z.infer<typeof registerBodySchema>;
+
+export const swapRequestUpdateSchema = z
+  .object({
+    // Ambos opcionais, mas se enviados, devem ser válidos
+    observation: z.string().nullable().optional(),
+    status: z.nativeEnum(SwapStatus).optional(),
+  })
+  // Garante que pelo menos um campo seja enviado para update
+  .refine(
+    (data) => data.observation !== undefined || data.status !== undefined,
+    {
+      message:
+        "Pelo menos 'observation' ou 'status' deve ser fornecido para atualização.",
+    }
+  );
+export type SwapRequestUpdateInput = z.infer<typeof swapRequestUpdateSchema>;
+
+const sortableColumns = z
+  .enum(['createdAt', 'swapDate', 'paybackDate', 'id'])
+  .default('createdAt');
+const sortOrderValues = z.enum(['asc', 'desc']).default('desc');
+
+// Schema para Query Params de GET /requests (CORRIGIDO)
+export const requestListQuerySchema = z
+  .object({
+    status: z.nativeEnum(SwapStatus).optional(),
+    sortBy: sortableColumns.optional(),
+    sortOrder: sortOrderValues.optional(),
+    startDate: z.coerce
+      .date({ invalid_type_error: 'Data de início inválida.' })
+      .optional(),
+    endDate: z.coerce
+      .date({ invalid_type_error: 'Data final inválida.' })
+      .optional(),
+    employeeIdOut: z
+      .string()
+      .regex(/^[0-9]+$/)
+      .optional(),
+    employeeIdIn: z
+      .string()
+      .regex(/^[0-9]+$/)
+      .optional(),
+    employeeFunction: z.nativeEnum(EmployeeFunction).optional(),
+    groupOut: z.nativeEnum(ReliefGroup).optional(),
+    groupIn: z.nativeEnum(ReliefGroup).optional(),
+    eventType: z.nativeEnum(SwapEventType).optional(),
+  })
+  .refine(
+    (data) => {
+      // Só valida se ambas as datas foram fornecidas
+      if (data.startDate && data.endDate) {
+        // endDate deve ser maior ou igual a startDate
+        return data.endDate >= data.startDate;
+      }
+      return true; // Passa se uma ou nenhuma data foi fornecida
+    },
+    {
+      message: 'Data final não pode ser anterior à data de início.', // Mensagem de erro
+      path: ['endDate'], // Associa o erro ao campo endDate
+    }
+  );
