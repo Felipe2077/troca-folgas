@@ -23,14 +23,12 @@ export async function logAudit({
   try {
     await prisma.auditLog.create({
       data: {
-        // Conecta a relação 'performedBy' usando o userId
         performedBy: {
           connect: {
-            id: userId, // Passa o ID numérico aqui
+            id: userId,
           },
         },
-        // Define os outros campos escalares normalmente
-        userLoginIdentifier: userLoginIdentifier, // Passa o Crachá aqui
+        userLoginIdentifier: userLoginIdentifier, // Define identificador escalar
         action: action,
         details: details,
         targetResourceId: targetResourceId,

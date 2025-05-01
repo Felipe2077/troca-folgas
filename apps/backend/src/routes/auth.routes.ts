@@ -174,11 +174,18 @@ export async function authRoutes(fastify: FastifyInstance) {
           },
         });
 
+        const actingAdmin = await prisma.user.findUnique({
+          // Busca dados do Admin que está agindo
+          where: { id: parseInt(request.user.sub, 10) },
+          select: { loginIdentifier: true }, // Pega só o crachá
+        });
+
         // Log de Auditoria (como antes)
         await logAudit({
           prisma,
-          userId: request.user.id,
-          userLoginIdentifier: request.user.loginIdentifier,
+          userId: parseInt(request.user.sub, 10),
+          userLoginIdentifier:
+            actingAdmin?.loginIdentifier ?? `AdminID:${request.user.sub}`, // Usa o crachá ou fallback
           action: 'ADMIN_CREATE_USER',
           details: `Admin created user '${newUser.name}' (ID: ${newUser.id}) with role ${newUser.role}.`,
           targetResourceId: newUser.id,

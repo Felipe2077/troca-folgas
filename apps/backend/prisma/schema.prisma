@@ -7,7 +7,7 @@ datasource db {
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../node_modules/.prisma/client"
+    output   = "../node_modules/.prisma/client" 
 }
 
 // ----- ENUMS -----
@@ -65,6 +65,7 @@ model User {
 
   submittedRequests SwapRequest[] @relation("SubmittedBy")
   auditLogs         AuditLog[]    @relation("PerformedBy") // Relação AuditLog -> User
+  
 
   @@map("users")
 }
@@ -115,7 +116,6 @@ model AuditLog {
   // Para isso userId NÃO pode ser opcional. Ajustado userId para Int (não Int?)
   // E a relação em User (auditLogs) também não pode ser opcional (User?).
   performedBy User @relation("PerformedBy", fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-
   @@map("audit_logs")
 }
 
