@@ -1,15 +1,13 @@
-// prisma/schema.prisma
+// prisma/schema.prisma 
 
-// Define o conector e a URL do banco (lê do .env)
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// Define o gerador do Prisma Client (gera o cliente tipado)
 generator client {
   provider = "prisma-client-js"
-  output   = "../../../node_modules/.prisma/client"
+  output   = "../node_modules/.prisma/client"
 }
 
 // ----- ENUMS -----
@@ -33,81 +31,14 @@ enum ReliefGroup {
 }
 
 enum SwapEventType {
-  TROCA // Mesmo fim de semana
-  SUBSTITUICAO // Fins de semana diferentes
+  TROCA
+  SUBSTITUICAO
 }
 
 enum SwapStatus {
-  AGENDADO // Estado padrão implícito, mas podemos registrar explicitamente
-  NAO_REALIZADA // Marcado pelo ADM
-  REALIZADO
-}
-
-
-// ----- MODELS -----
-
-model User {
-  id              Int      @id @default(autoincrement())
-  name            String
-  loginIdentifier String   @unique // Pode ser Email ou CPF (a definir validação)
-  passwordHash    String   // Armazenar apenas o hash da senha
-  role            Role
-  isActive        Boolean  @default(true) 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  submittedRequests SwapRequest[] @relation("SubmittedBy") // Relação: 1 User -> N SwapRequests
-  auditLogs         AuditLog[]    @relation("PerformedBy") // Relação: 1 User -> N AuditLogs
-
-  @@map("users") // Nome da tabela no banco
-}
-
-model SwapRequest {
-  id               Int            @id @default(autoincrement())
-  employeeIdOut    String         // Crachá/ID do funcionário que sai
-  employeeIdIn     String         // Crachá/ID do funcionário que entra
-  swapDate         DateTime       // Data da troca (Entrada cobre Saída) @db.Date ? ou DateTime? Decidir. Vamos usar DateTime por enquanto.
-  paybackDate      DateTime       // Data do pagamento (Saída cobre Entrada)
-  employeeFunction EmployeeFunction
-  groupOut         ReliefGroup
-  groupIn          ReliefGroup
-  eventType        SwapEventType // TROCA ou SUBSTITUICAO (definido pela lógica)
-  status           SwapStatus     @default(AGENDADO)
-  observation      String?        // Observação do ADM (opcional)
-
-  submittedById Int // Chave estrangeira para User
-  submittedBy   User @relation("SubmittedBy", fields: [submittedById], references: [id])
-
-  isMirror           Boolean   @default(false) // Indica se este é um registro espelho de uma substituição
-  relatedRequestId   Int?      @unique         // Guarda o ID da solicitação original (se for espelho) ou do espelho (se for original)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("swap_requests") // Nome da tabela no banco
-}
-
-model AuditLog {
-  id        Int      @id @default(autoincrement())
-  timestamp DateTime @default(now())
-  action    String   // Ex: "SUBMIT_SWAP", "MARK_NOT_REALIZED", "UPDATE_SETTINGS"
-  details   Json?    // Detalhes adicionais sobre a ação (opcional)
-
-  performedById Int? // Quem realizou (pode ser nulo para ações do sistema?)
-  performedBy   User? @relation("PerformedBy", fields: [performedById], references: [id])
-
-  @@map("audit_logs") // Nome da tabela no banco
-}
-
-model Settings {
-  id                 Int       @id @default(1)
-  submissionStartDay DayOfWeek @default(MONDAY)    // Dia de início padrão
-  submissionEndDay   DayOfWeek @default(WEDNESDAY)  // Dia de fim padrão
-
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-
-  @@map("settings")
+  AGENDADO
+  NAO_REALIZADA
+  REALIZADO 
 }
 
 enum DayOfWeek {
@@ -118,4 +49,83 @@ enum DayOfWeek {
   THURSDAY
   FRIDAY
   SATURDAY
+}
+
+// ----- MODELS -----
+
+model User {
+  id              Int      @id @default(autoincrement())
+  name            String
+  loginIdentifier String   @unique // Validação de formato/tamanho no Zod
+  passwordHash    String
+  role            Role
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  submittedRequests SwapRequest[] @relation("SubmittedBy")
+  auditLogs         AuditLog[]    @relation("PerformedBy") // Relação AuditLog -> User
+
+  @@map("users")
+}
+
+model SwapRequest {
+  id               Int            @id @default(autoincrement())
+  employeeIdOut    String
+  employeeIdIn     String
+  swapDate         DateTime
+  paybackDate      DateTime
+  employeeFunction EmployeeFunction
+  groupOut         ReliefGroup
+  groupIn          ReliefGroup
+  eventType        SwapEventType
+  status           SwapStatus     @default(AGENDADO)
+  observation      String?
+
+  submittedById Int
+  submittedBy   User @relation("SubmittedBy", fields: [submittedById], references: [id])
+
+  isMirror           Boolean   @default(false)
+  relatedRequestId   Int?      @unique // ID da request original/espelho
+
+  // <--  Relação explícita para espelhamento -->
+  // Define uma relação opcional 1-para-1 consigo mesma
+  originalRequest  SwapRequest? @relation("MirrorSwap", fields: [relatedRequestId], references: [id], onDelete: SetNull, onUpdate: Cascade) // Se eu sou um espelho, aponta para o original. Se o original for deletado, relatedRequestId fica null.
+  mirrorRequest    SwapRequest? @relation("MirrorSwap") // Se eu sou original, aponta para o meu espelho.
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("swap_requests")
+}
+
+model AuditLog {
+  id                 Int       @id @default(autoincrement())
+  timestamp          DateTime  @default(now())
+  action             String
+  details            String?   // Mudado de Json? para String? para simplicidade inicial
+  userId             Int       // ID do usuário que realizou a ação (Chave Estrangeira)
+  userLoginIdentifier String   // Identificador (Crachá) denormalizado para fácil leitura
+  targetResourceId   Int?
+  targetResourceType String?
+
+  // Relação explícita com User
+  // Se um usuário for deletado, o que acontece com o log? SetNull torna userId opcional (userId Int?)
+  // NoAction ou Restrict impediriam a deleção do usuário. Vamos manter Restrict (padrão implícito) por enquanto.
+  // Para isso userId NÃO pode ser opcional. Ajustado userId para Int (não Int?)
+  // E a relação em User (auditLogs) também não pode ser opcional (User?).
+  performedBy User @relation("PerformedBy", fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@map("audit_logs")
+}
+
+
+model Settings {
+  id                 Int       @id @default(1)
+  submissionStartDay DayOfWeek @default(MONDAY)
+  submissionEndDay   DayOfWeek @default(WEDNESDAY)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@map("settings")
 }

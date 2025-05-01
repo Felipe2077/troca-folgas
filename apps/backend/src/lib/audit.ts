@@ -1,23 +1,17 @@
-// apps/backend/src/lib/audit.ts -
+// apps/backend/src/lib/audit.ts - VERSÃO CORRETA FINAL (DE NOVO!)
 import { PrismaClient } from '@prisma/client';
 
-// Tipagem para os parâmetros da função de log
 interface LogAuditParams {
-  prisma: PrismaClient; // Instância do Prisma
-  userId: number; // ID do usuário que realizou a ação
-  userLoginIdentifier: string; // Identificador do usuário
-  action: string; // Descrição da ação (ex: LOGIN, CREATE_REQUEST)
-  details?: string; // Detalhes adicionais (opcional)
-  targetResourceId?: number; // ID do recurso afetado (opcional)
-  targetResourceType?: string; // Tipo do recurso afetado (opcional, ex: 'SwapRequest', 'User')
+  prisma: PrismaClient;
+  userId: number; // ID numérico do usuário
+  userLoginIdentifier: string; // Identificador string (Crachá)
+  action: string;
+  details?: string;
+  targetResourceId?: number;
+  targetResourceType?: string;
 }
 
-/**
- * Cria um registro na tabela de Log de Auditoria.
- * Captura erros silenciosamente para não quebrar a requisição principal.
- */
 export async function logAudit({
-  // Garanta o 'export' aqui
   prisma,
   userId,
   userLoginIdentifier,
@@ -29,18 +23,21 @@ export async function logAudit({
   try {
     await prisma.auditLog.create({
       data: {
-        userId: userId, // <-- Define userId diretamente
-        userLoginIdentifier,
-        action,
-        details,
-        targetResourceId,
-        targetResourceType,
-        // timestamp é gerado automaticamente pelo @default(now())
+        // Conecta a relação 'performedBy' usando o userId
+        performedBy: {
+          connect: {
+            id: userId, // Passa o ID numérico aqui
+          },
+        },
+        // Define os outros campos escalares normalmente
+        userLoginIdentifier: userLoginIdentifier, // Passa o Crachá aqui
+        action: action,
+        details: details,
+        targetResourceId: targetResourceId,
+        targetResourceType: targetResourceType,
       },
     });
-    // console.log(`Audit log created: User ${userId} performed ${action}`); // Log de sucesso (opcional)
   } catch (error) {
-    // Apenas loga o erro no console do servidor, não lança exceção
     console.error(
       `!!! Failed to create audit log for action [${action}] by user ${userId}:`,
       error

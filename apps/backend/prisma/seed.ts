@@ -22,7 +22,7 @@ async function main() {
     const admin = await prisma.user.create({
       data: {
         name: 'Admin Sistema',
-        loginIdentifier: 'admin@sistema.com',
+        loginIdentifier: '99999',
         passwordHash: adminPasswordHash,
         role: Role.ADMINISTRADOR,
         isActive: true,
@@ -44,7 +44,7 @@ async function main() {
       // Atribui à variável externa
       data: {
         name: 'Felipe Encarregado',
-        loginIdentifier: 'encarregado@teste.com',
+        loginIdentifier: '99998',
         passwordHash: encargadoPasswordHash,
         role: Role.ENCARREGADO,
         isActive: true,
