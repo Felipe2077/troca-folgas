@@ -40,6 +40,7 @@ enum SwapEventType {
 enum SwapStatus {
   AGENDADO // Estado padrão implícito, mas podemos registrar explicitamente
   NAO_REALIZADA // Marcado pelo ADM
+  REALIZADO
 }
 
 
@@ -76,6 +77,9 @@ model SwapRequest {
 
   submittedById Int // Chave estrangeira para User
   submittedBy   User @relation("SubmittedBy", fields: [submittedById], references: [id])
+
+  isMirror           Boolean   @default(false) // Indica se este é um registro espelho de uma substituição
+  relatedRequestId   Int?      @unique         // Guarda o ID da solicitação original (se for espelho) ou do espelho (se for original)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
