@@ -1,15 +1,12 @@
 // apps/backend/src/routes/users.routes.ts
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'; // Para P2025
-import { Role } from '@repo/shared-types'; // Enum/Tipo Role compartilhado
+import { Role, userUpdateSchema } from '@repo/shared-types'; // Enum/Tipo Role compartilhado
 import { FastifyInstance } from 'fastify';
 import { ZodError } from 'zod'; // Import ZodError
 import { authenticate } from '../hooks/authenticate.hook.js'; // Hook de autenticação
 import { logAudit } from '../lib/audit.js'; // Log
 import { prisma } from '../lib/prisma.js';
-import {
-  userIdParamsSchema,
-  userUpdateSchema,
-} from '../schemas/users.schema.js';
+import { userIdParamsSchema } from '../schemas/users.schema.js';
 
 export async function usersRoutes(fastify: FastifyInstance) {
   // --- Rota GET /api/users (ADMIN ONLY) ---
@@ -72,24 +69,20 @@ export async function usersRoutes(fastify: FastifyInstance) {
         // 2. Validar ID da URL
         const paramsParse = userIdParamsSchema.safeParse(request.params);
         if (!paramsParse.success) {
-          return reply
-            .status(400)
-            .send({
-              message: 'ID de usuário inválido.',
-              issues: paramsParse.error.format(),
-            });
+          return reply.status(400).send({
+            message: 'ID de usuário inválido.',
+            issues: paramsParse.error.format(),
+          });
         }
         const { id: userIdToModify } = paramsParse.data;
 
         // 3. Validar Corpo da Requisição (name?, role?)
         const bodyParse = userUpdateSchema.safeParse(request.body);
         if (!bodyParse.success) {
-          return reply
-            .status(400)
-            .send({
-              message: 'Dados inválidos.',
-              issues: bodyParse.error.format(),
-            });
+          return reply.status(400).send({
+            message: 'Dados inválidos.',
+            issues: bodyParse.error.format(),
+          });
         }
         const validatedData = bodyParse.data; // Contém name e/ou role validados
 
@@ -100,11 +93,9 @@ export async function usersRoutes(fastify: FastifyInstance) {
           validatedData.role !== undefined &&
           validatedData.role !== request.user.role
         ) {
-          return reply
-            .status(403)
-            .send({
-              message: 'Administradores não podem alterar a própria role.',
-            });
+          return reply.status(403).send({
+            message: 'Administradores não podem alterar a própria role.',
+          });
         }
         // Nota: Permitimos Admin alterar o PRÓPRIO nome.
 

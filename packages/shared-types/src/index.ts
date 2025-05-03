@@ -298,3 +298,24 @@ export const requestListQuerySchema = z
       path: ['endDate'], // Associa o erro ao campo endDate
     }
   );
+
+export const userUpdateSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(3, 'Nome precisa ter no mínimo 3 caracteres.')
+      .optional(), // Nome é opcional no update
+    role: z
+      .nativeEnum(Role, {
+        invalid_type_error: 'Cargo inválido.',
+      })
+      .optional(), // Role também é opcional
+  })
+  // Garante que PELO MENOS UM campo foi enviado
+  .refine((data) => data.name !== undefined || data.role !== undefined, {
+    message: "É necessário fornecer 'name' ou 'role' para atualizar.",
+    // Não precisa de path aqui, erro geral do objeto
+  });
+
+export type UserUpdateInput = z.infer<typeof userUpdateSchema>;
