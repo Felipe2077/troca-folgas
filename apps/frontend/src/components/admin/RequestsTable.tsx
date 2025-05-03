@@ -72,8 +72,8 @@ export function RequestsTable({
 
   return (
     <Table>
-      <TableHeader>
-        <TableRow>
+      <TableHeader className="bg-neutral-50/30 ">
+        <TableRow className="hover:bg-amber-900/10">
           <TableHead className="w-[60px] text-center">ID</TableHead>
           <TableHead className="w-[100px] text-center">Sai (Crachá)</TableHead>
           <TableHead className="w-[100px] text-center">
@@ -122,7 +122,7 @@ export function RequestsTable({
             className={cn(
               'hover:bg-muted/50', // Mantém o estilo de hover
               req.eventType === SwapEventType.SUBSTITUICAO &&
-                'bg-neutral-950/80 dark:bg-neutral-50/5' // Ex: Fundo 'muted' com baixa opacidade
+                'bg-neutral-950/80 dark:bg-neutral-500/5' // Ex: Fundo 'muted' com baixa opacidade
               // Ajuste 'bg-muted/20 dark:bg-muted/10' para a cor/opacidade que achar melhor.
               // Poderia ser 'bg-blue-950', 'bg-slate-100 dark:bg-slate-900', etc.
             )}
@@ -159,7 +159,7 @@ export function RequestsTable({
                 className={
                   req.eventType === SwapEventType.TROCA
                     ? 'bg-cyan-600'
-                    : 'bg-purple-600'
+                    : 'bg-teal-600/50'
                 }
               >
                 {req.eventType}
