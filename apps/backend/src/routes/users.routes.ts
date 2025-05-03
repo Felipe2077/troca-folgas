@@ -4,10 +4,11 @@ import { Role } from '@repo/shared-types'; // Enum/Tipo Role compartilhado
 import { FastifyInstance } from 'fastify';
 import { ZodError } from 'zod'; // Import ZodError
 import { authenticate } from '../hooks/authenticate.hook.js'; // Hook de autenticação
+import { logAudit } from '../lib/audit.js'; // Log
 import { prisma } from '../lib/prisma.js';
 import {
   userIdParamsSchema,
-  userUpdateStatusBodySchema,
+  userUpdateSchema,
 } from '../schemas/users.schema.js';
 
 export async function usersRoutes(fastify: FastifyInstance) {
@@ -57,7 +58,7 @@ export async function usersRoutes(fastify: FastifyInstance) {
 
   // ---  Rota PATCH /:id/status (ADMIN ONLY) ---
   fastify.patch(
-    '/:id/status', // Rota para atualizar o status
+    '/:id',
     {
       onRequest: [authenticate], // Exige autenticação
     },
@@ -65,48 +66,59 @@ export async function usersRoutes(fastify: FastifyInstance) {
       try {
         // 1. Verificar se é Administrador
         if (request.user.role !== Role.ADMINISTRADOR) {
-          return reply.status(403).send({
-            message:
-              'Acesso negado. Apenas administradores podem alterar status de usuários.',
-          });
+          return reply.status(403).send({ message: 'Acesso negado.' });
         }
 
-        // 2. Validar Parâmetro da Rota (ID do usuário a ser modificado)
+        // 2. Validar ID da URL
         const paramsParse = userIdParamsSchema.safeParse(request.params);
         if (!paramsParse.success) {
-          return reply.status(400).send({
-            message: 'ID de usuário inválido na URL.',
-            issues: paramsParse.error.format(),
-          });
+          return reply
+            .status(400)
+            .send({
+              message: 'ID de usuário inválido.',
+              issues: paramsParse.error.format(),
+            });
         }
         const { id: userIdToModify } = paramsParse.data;
 
-        // 3. Validar Corpo da Requisição ({ isActive: boolean })
-        const bodyParse = userUpdateStatusBodySchema.safeParse(request.body);
+        // 3. Validar Corpo da Requisição (name?, role?)
+        const bodyParse = userUpdateSchema.safeParse(request.body);
         if (!bodyParse.success) {
-          return reply.status(400).send({
-            message: 'Corpo da requisição inválido.',
-            issues: bodyParse.error.format(),
-          });
+          return reply
+            .status(400)
+            .send({
+              message: 'Dados inválidos.',
+              issues: bodyParse.error.format(),
+            });
         }
-        const { isActive } = bodyParse.data;
+        const validatedData = bodyParse.data; // Contém name e/ou role validados
 
-        // 4. Verificar se o Admin está tentando desativar a si mesmo
-        // request.user.sub contém o ID do usuário logado (vem do JWT)
-        if (Number(request.user.sub) === userIdToModify && isActive === false) {
-          return reply.status(403).send({
-            message: 'Administradores não podem desativar a própria conta.',
-          });
+        // 4. Regra de Negócio: Admin não pode mudar a PRÓPRIA role
+        const loggedInAdminId = parseInt(request.user.sub, 10);
+        if (
+          loggedInAdminId === userIdToModify &&
+          validatedData.role !== undefined &&
+          validatedData.role !== request.user.role
+        ) {
+          return reply
+            .status(403)
+            .send({
+              message: 'Administradores não podem alterar a própria role.',
+            });
         }
+        // Nota: Permitimos Admin alterar o PRÓPRIO nome.
 
-        // 5. Atualizar o status do usuário no Banco de Dados
+        // 5. Atualizar Usuário no Banco
         const updatedUser = await prisma.user.update({
           where: { id: userIdToModify },
           data: {
-            isActive: isActive, // Define o novo status
+            // Passa os dados validados (Prisma ignora chaves com valor undefined)
+            name: validatedData.name,
+            role: validatedData.role,
+            // isActive não é modificado aqui, usamos a outra rota
           },
-          // Seleciona os campos para retornar (NÃO incluir passwordHash)
           select: {
+            // Seleciona campos para retornar (sem hash)
             id: true,
             name: true,
             loginIdentifier: true,
@@ -117,34 +129,49 @@ export async function usersRoutes(fastify: FastifyInstance) {
           },
         });
 
-        // 6. Retornar sucesso com o usuário atualizado
+        // 6. Log de Auditoria
+        try {
+          const actingAdmin = await prisma.user.findUnique({
+            where: { id: loggedInAdminId },
+            select: { loginIdentifier: true },
+          });
+          await logAudit({
+            prisma,
+            userId: loggedInAdminId,
+            userLoginIdentifier:
+              actingAdmin?.loginIdentifier ?? `AdminID:${loggedInAdminId}`,
+            action: 'ADMIN_UPDATE_USER',
+            details: `Admin updated user ${updatedUser.name} (ID: ${updatedUser.id}). Changes: ${JSON.stringify(validatedData)}`,
+            targetResourceId: updatedUser.id,
+            targetResourceType: 'User',
+          });
+        } catch (logError) {
+          /* ... log error ... */
+        }
+
+        // 7. Retornar sucesso
         return reply.status(200).send({ user: updatedUser });
       } catch (error) {
-        // Trata erro se o usuário com o ID não for encontrado
-        if (error instanceof PrismaClientKnownRequestError) {
-          if (error.code === 'P2025') {
-            console.error(
-              `[API PATCH /users/:id/status] Usuário com ID ${(request.params as any)?.id} não encontrado (P2025).`
-            );
-            return reply
-              .status(404)
-              .send({ message: 'Usuário não encontrado.' });
-          }
+        // Tratar erros Prisma (ex: usuário não encontrado P2025)
+        if (
+          error instanceof PrismaClientKnownRequestError &&
+          error.code === 'P2025'
+        ) {
+          return reply.status(404).send({ message: 'Usuário não encontrado.' });
         }
-        // Tratamento de erro Zod (embora safeParse deva pegar antes)
+        // Outros erros
         if (error instanceof ZodError) {
           return reply
             .status(400)
-            .send({ message: 'Erro de validação.', issues: error.format() });
+            .send({ message: 'Erro Zod.', issues: error.format() });
         }
-        // Outros erros
-        fastify.log.error(error);
+        fastify.log.error({ msg: 'Error updating user', error });
         return reply
           .status(500)
-          .send({ message: 'Erro interno ao atualizar status do usuário.' });
+          .send({ message: 'Erro interno ao atualizar usuário.' });
       }
     }
-  ); // Fim do PATCH /:id/status
+  ); // Fim do PATCH /:id
   // Adicionaremos rotas POST (criar), PUT/PATCH (editar/desativar?), DELETE aqui depois...
 
   fastify.log.info('User routes registered');
