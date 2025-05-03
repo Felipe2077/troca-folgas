@@ -58,8 +58,10 @@ export async function requestRoutes(fastify: FastifyInstance) {
         status,
         sortBy,
         sortOrder,
-        startDate,
-        endDate,
+        swapDateStart,
+        swapDateEnd,
+        paybackDateStart,
+        paybackDateEnd,
         employeeIdOut,
         employeeIdIn,
         employeeFunction,
@@ -94,20 +96,32 @@ export async function requestRoutes(fastify: FastifyInstance) {
       }
 
       // Filtro de Data (campo createdAt)
-      if (startDate || endDate) {
-        whereClause.createdAt = {};
-        if (startDate) {
-          const start = new Date(startDate); // Garante que é Date
-          start.setHours(0, 0, 0, 0); // Início do dia
-          whereClause.createdAt.gte = start;
+      if (swapDateStart || swapDateEnd) {
+        whereClause.swapDate = {};
+        if (swapDateStart) {
+          const start = new Date(swapDateStart);
+          start.setHours(0, 0, 0, 0);
+          whereClause.swapDate.gte = start;
         }
-        if (endDate) {
-          const end = new Date(endDate); // Garante que é Date
-          end.setHours(23, 59, 59, 999); // Fim do dia
-          whereClause.createdAt.lte = end;
+        if (swapDateEnd) {
+          const end = new Date(swapDateEnd);
+          end.setHours(23, 59, 59, 999);
+          whereClause.swapDate.lte = end;
         }
       }
-      // TODO: Adicionar where para isMirror? Ou sempre mostrar ambos? Por enquanto mostra ambos.
+      if (paybackDateStart || paybackDateEnd) {
+        whereClause.paybackDate = {};
+        if (paybackDateStart) {
+          const start = new Date(paybackDateStart);
+          start.setHours(0, 0, 0, 0);
+          whereClause.paybackDate.gte = start;
+        }
+        if (paybackDateEnd) {
+          const end = new Date(paybackDateEnd);
+          end.setHours(23, 59, 59, 999);
+          whereClause.paybackDate.lte = end;
+        }
+      }
 
       // 4. Construir Cláusula OrderBy (mantida)
       const orderByClause = { [sortBy || 'createdAt']: sortOrder || 'desc' };

@@ -260,17 +260,11 @@ const sortableColumns = z
 const sortOrderValues = z.enum(['asc', 'desc']).default('desc');
 
 // Schema para Query Params de GET /requests (CORRIGIDO)
+
 export const requestListQuerySchema = z
   .object({
+    // Filtros existentes mantidos
     status: z.nativeEnum(SwapStatus).optional(),
-    sortBy: sortableColumns.optional(),
-    sortOrder: sortOrderValues.optional(),
-    startDate: z.coerce
-      .date({ invalid_type_error: 'Data de início inválida.' })
-      .optional(),
-    endDate: z.coerce
-      .date({ invalid_type_error: 'Data final inválida.' })
-      .optional(),
     employeeIdOut: z
       .string()
       .regex(/^[0-9]+$/)
@@ -283,19 +277,54 @@ export const requestListQuerySchema = z
     groupOut: z.nativeEnum(ReliefGroup).optional(),
     groupIn: z.nativeEnum(ReliefGroup).optional(),
     eventType: z.nativeEnum(SwapEventType).optional(),
+
+    // REMOVA startDate e endDate (referentes a createdAt)
+    // startDate: z.coerce.date().optional(),
+    // endDate: z.coerce.date().optional(),
+
+    // ADICIONE filtros para swapDate
+    swapDateStart: z.coerce
+      .date({ invalid_type_error: 'Data de Troca (Início) inválida.' })
+      .optional(),
+    swapDateEnd: z.coerce
+      .date({ invalid_type_error: 'Data de Troca (Fim) inválida.' })
+      .optional(),
+
+    // ADICIONE filtros para paybackDate
+    paybackDateStart: z.coerce
+      .date({ invalid_type_error: 'Data de Pagamento (Início) inválida.' })
+      .optional(),
+    paybackDateEnd: z.coerce
+      .date({ invalid_type_error: 'Data de Pagamento (Fim) inválida.' })
+      .optional(),
+
+    // Ordenação mantida
+    sortBy: sortableColumns.optional(),
+    sortOrder: sortOrderValues.optional(),
   })
+  // Adiciona refine para garantir que data final >= data inicial para cada par
   .refine(
-    (data) => {
-      // Só valida se ambas as datas foram fornecidas
-      if (data.startDate && data.endDate) {
-        // endDate deve ser maior ou igual a startDate
-        return data.endDate >= data.startDate;
-      }
-      return true; // Passa se uma ou nenhuma data foi fornecida
-    },
+    (data) =>
+      !(
+        data.swapDateStart &&
+        data.swapDateEnd &&
+        data.swapDateEnd < data.swapDateStart
+      ),
     {
-      message: 'Data final não pode ser anterior à data de início.', // Mensagem de erro
-      path: ['endDate'], // Associa o erro ao campo endDate
+      message: 'Data final (Troca) não pode ser anterior à inicial.',
+      path: ['swapDateEnd'],
+    }
+  )
+  .refine(
+    (data) =>
+      !(
+        data.paybackDateStart &&
+        data.paybackDateEnd &&
+        data.paybackDateEnd < data.paybackDateStart
+      ),
+    {
+      message: 'Data final (Pagamento) não pode ser anterior à inicial.',
+      path: ['paybackDateEnd'],
     }
   );
 
