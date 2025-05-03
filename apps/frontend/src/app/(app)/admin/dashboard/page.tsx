@@ -4,8 +4,6 @@
 // --- Imports ---
 import { ObservationDialog } from '@/components/admin/ObservationDialog';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -13,14 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -29,33 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { useAuth } from '@/contexts/AuthContext';
-import { cn, formatDate, getStatusBadgeClasses } from '@/lib/utils';
-import {
-  Role,
-  SwapEventType,
-  SwapRequest,
-  SwapStatus,
-} from '@repo/shared-types';
+import { Role, SwapRequest, SwapStatus } from '@repo/shared-types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 // Imports de ícones (Loader2 já estava, adiciona os de seta)
-import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  CheckCircle,
-  Loader2,
-  MoreHorizontal,
-} from 'lucide-react'; // <-- MODIFICADO: Adiciona ícones de seta
+import { RequestsTable } from '@/components/admin/RequestsTable';
+import { Loader2 } from 'lucide-react'; // <-- MODIFICADO: Adiciona ícones de seta
 import { useState } from 'react'; // <-- MODIFICADO: Importa React explicitamente se precisar de Fragments <>
 import { DateRange } from 'react-day-picker';
 import { toast } from 'sonner';
@@ -343,164 +312,15 @@ export default function AdminDashboardPage() {
             )}
 
           {!isQueryLoading && !isError && requests && requests.length > 0 && (
-            <Table>
-              <TableHeader className="bg-stone-800">
-                <TableRow>
-                  {/* Cabeçalhos - MODIFICADO 'Criado Em' */}
-                  <TableHead className="w-[50px] ">ID</TableHead>
-                  <TableHead>Sai (Crachá)</TableHead>
-                  <TableHead>Entra (Crachá)</TableHead>
-                  <TableHead>Função</TableHead>
-                  <TableHead>Data Troca</TableHead>
-                  {/* TODO: Tornar clicável depois */}
-                  <TableHead>Data Pagamento</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Observação</TableHead>
-                  {/* MODIFICADO: Cabeçalho 'Criado Em' agora é um botão clicável */}
-                  <TableHead>
-                    <Button
-                      variant="ghost"
-                      onClick={() => handleSort('createdAt')}
-                      className="px-1 text-base"
-                    >
-                      {/* Ajuste padding se necessário */}
-                      Criado Em
-                      {sortColumn === 'createdAt' ? (
-                        sortDirection === 'asc' ? (
-                          <ArrowUp className="ml-2 h-4 w-4" />
-                        ) : (
-                          <ArrowDown className="ml-2 h-4 w-4" />
-                        )
-                      ) : (
-                        <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" /> // Opacidade menor se não ativo
-                      )}
-                    </Button>
-                  </TableHead>
-                  <TableHead>
-                    <span className="sr-only">Ações</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {/* Mapeamento dos dados (sem alteração aqui) */}
-                {requests.map((req: SwapRequest) => (
-                  <TableRow key={req.id}>
-                    <TableCell className="font-medium">{req.id}</TableCell>
-                    <TableCell>{req.employeeIdOut}</TableCell>
-                    <TableCell>{req.employeeIdIn}</TableCell>
-                    <TableCell>{req.employeeFunction}</TableCell>
-                    <TableCell>{formatDate(req.swapDate)}</TableCell>
-                    <TableCell>{formatDate(req.paybackDate)}</TableCell>
-                    <TableCell>
-                      <Badge
-                        // variant={
-                        //   req.eventType === SwapEventType.TROCA
-                        //     ? 'secondary'
-                        //     : 'outline'
-                        // }
-                        className={cn(
-                          req.eventType === SwapEventType.TROCA
-                            ? 'bg-blue-900'
-                            : 'bg-amber-900'
-                        )}
-                      >
-                        {req.eventType}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          {/* Badge clicável como gatilho */}
-                          <Button
-                            variant="ghost"
-                            className="p-0 h-auto font-normal data-[state=open]:bg-muted"
-                          >
-                            <Badge
-                              className={cn(
-                                'cursor-pointer',
-                                getStatusBadgeClasses(req.status)
-                              )}
-                            >
-                              {req.status}
-                            </Badge>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start">
-                          <DropdownMenuLabel>
-                            Mudar Status Para:
-                          </DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          {/* Itera sobre os valores de SwapStatus */}
-                          {Object.values(SwapStatus).map((statusOption) => (
-                            <DropdownMenuItem
-                              key={statusOption}
-                              // Chama handler com ID e NOVO status
-                              onSelect={() =>
-                                handleStatusUpdate(
-                                  req.id,
-                                  req.status,
-                                  statusOption
-                                )
-                              }
-                              // Desabilita se for o status atual ou se a mutação geral estiver rodando
-                              disabled={
-                                req.status === statusOption ||
-                                updateRequestMutation.isPending
-                              }
-                            >
-                              {/* Feedback visual opcional no item */}
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  'mr-2 border-none p-0 h-2 w-2',
-                                  getStatusBadgeClasses(statusOption)
-                                )}
-                              >
-                                &nbsp;
-                              </Badge>
-                              {statusOption}
-                              {/* Ícone de check se for o status atual */}
-                              {req.status === statusOption && (
-                                <CheckCircle className="ml-auto h-4 w-4 opacity-50" />
-                              )}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                    <TableCell className="whitespace-normal max-w-[350px] break-words">
-                      {req.observation || '-'}
-                    </TableCell>
-                    <TableCell>{formatDate(req.createdAt)}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            aria-haspopup="true"
-                            size="icon"
-                            variant="ghost"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Abrir menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                          <Separator className="mb-1" />
-                          <DropdownMenuItem
-                            onClick={() => setEditingRequest(req)}
-                            className="cursor-pointer"
-                          >
-                            Adicionar/Ver Observação
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <RequestsTable
+              requests={requests}
+              sortColumn={sortColumn}
+              sortDirection={sortDirection}
+              updateRequestMutation={updateRequestMutation} // Passa o objeto da mutação
+              handleSort={handleSort}
+              handleStatusUpdate={handleStatusUpdate}
+              handleEditObservation={setEditingRequest} // Passa setEditingRequest diretamente
+            />
           )}
         </CardContent>
       </Card>
