@@ -9,7 +9,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     // Estrutura flex que tínhamos antes no RootLayout
     <div className="flex flex-col min-h-screen ">
       <Header />
-      <main className="flex-grow container mx-auto p-4 py-6 ">{children}</main>
+      <main className="flex-grow w-full max-w-full px-4 sm:px-6 lg:px-16 py-6">
+        {/* Exemplo de padding */}
+        {children}
+      </main>{' '}
       <Footer />
     </div>
   );

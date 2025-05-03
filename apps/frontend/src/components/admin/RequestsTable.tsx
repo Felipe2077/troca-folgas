@@ -74,44 +74,43 @@ export function RequestsTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[50px]">ID</TableHead>
-          <TableHead>Sai (Crachá)</TableHead>
-          <TableHead>Entra (Crachá)</TableHead>
-          <TableHead>Função</TableHead>
-          {/* Data Troca Ordenável */}
-          <TableHead>
+          <TableHead className="w-[60px]">ID</TableHead>
+          <TableHead className="w-[100px]">Sai (Crachá)</TableHead>
+          <TableHead className="w-[100px]">Entra (Crachá)</TableHead>
+          <TableHead className="w-[120px]">Função</TableHead>
+          <TableHead className="w-[130px]">
             <Button
               variant="ghost"
               onClick={() => handleSort('swapDate')}
-              className="px-1"
+              className="justify-start px-0"
             >
               Data Troca {renderSortIcon('swapDate')}
             </Button>
           </TableHead>
-          {/* Data Pagamento Ordenável */}
-          <TableHead>
+          <TableHead className="w-[130px]">
             <Button
               variant="ghost"
               onClick={() => handleSort('paybackDate')}
-              className="px-1"
+              className=" justify-start px-0"
             >
               Data Pagamento {renderSortIcon('paybackDate')}
             </Button>
           </TableHead>
-          <TableHead>Tipo</TableHead>
-          <TableHead>Status</TableHead>
+          <TableHead className="w-[150px]">Grupo Sai</TableHead>
+          <TableHead className="w-[150px]">Grupo Entra</TableHead>
+          <TableHead className="w-[120px]">Tipo</TableHead>
+          <TableHead className="w-[120px]">Status</TableHead>
           <TableHead>Observação</TableHead>
-          {/* Criado Em Ordenável */}
-          <TableHead>
+          <TableHead className="w-[130px]">
             <Button
               variant="ghost"
               onClick={() => handleSort('createdAt')}
-              className="px-1"
+              className="justify-start"
             >
               Criado Em {renderSortIcon('createdAt')}
             </Button>
           </TableHead>
-          <TableHead>Ações</TableHead>
+          <TableHead className="w-[60px]">Ações</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -123,6 +122,8 @@ export function RequestsTable({
             <TableCell>{req.employeeFunction}</TableCell>
             <TableCell>{formatDate(req.swapDate)}</TableCell>
             <TableCell>{formatDate(req.paybackDate)}</TableCell>
+            <TableCell>{req.groupOut}</TableCell>
+            <TableCell>{req.groupIn}</TableCell>
             <TableCell>
               <Badge
                 variant={
