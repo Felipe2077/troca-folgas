@@ -44,7 +44,8 @@ interface UpdateRequestParams {
 // Função fetchSwapRequests (aceita todos os filtros e ordenação)
 async function fetchSwapRequests(
   statusFilter: SwapStatus | 'ALL',
-  dateRange: DateRange | undefined,
+  swapDateRange: DateRange | undefined, // <-- Mudou aqui
+  paybackDateRange: DateRange | undefined, // <-- Adicionado aqui
   sortBy: SortableColumn,
   sortOrder: 'asc' | 'desc',
   employeeIdOut: string,
@@ -58,17 +59,10 @@ async function fetchSwapRequests(
   if (!token) return [];
   let apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/requests`;
   const queryParams = new URLSearchParams();
+
+  // Filtros que já tínhamos
   if (statusFilter !== 'ALL') {
     queryParams.append('status', statusFilter);
-  }
-  if (dateRange?.from) {
-    queryParams.append(
-      'startDate',
-      dateRange.from.toISOString().substring(0, 10)
-    );
-  }
-  if (dateRange?.to) {
-    queryParams.append('endDate', dateRange.to.toISOString().substring(0, 10));
   }
   if (employeeIdOut.trim()) {
     queryParams.append('employeeIdOut', employeeIdOut.trim());
@@ -88,12 +82,42 @@ async function fetchSwapRequests(
   if (eventType !== 'ALL') {
     queryParams.append('eventType', eventType);
   }
+
+  // Filtros de Data (NOVOS PARÂMETROS)
+  if (swapDateRange?.from) {
+    queryParams.append(
+      'swapDateStart',
+      swapDateRange.from.toISOString().substring(0, 10)
+    );
+  }
+  if (swapDateRange?.to) {
+    queryParams.append(
+      'swapDateEnd',
+      swapDateRange.to.toISOString().substring(0, 10)
+    );
+  }
+  if (paybackDateRange?.from) {
+    queryParams.append(
+      'paybackDateStart',
+      paybackDateRange.from.toISOString().substring(0, 10)
+    );
+  }
+  if (paybackDateRange?.to) {
+    queryParams.append(
+      'paybackDateEnd',
+      paybackDateRange.to.toISOString().substring(0, 10)
+    );
+  }
+
+  // Ordenação
   queryParams.append('sortBy', sortBy);
   queryParams.append('sortOrder', sortOrder);
+
   const queryString = queryParams.toString();
   if (queryString) {
     apiUrl += `?${queryString}`;
   }
+
   console.log(`>>> Fetching requests with URL: ${apiUrl}`);
   const response = await fetch(apiUrl, {
     headers: { Authorization: `Bearer ${token}` },
@@ -139,6 +163,13 @@ export default function AdminDashboardPage() {
   // Estados para Filtros
   const [statusFilter, setStatusFilter] = useState<SwapStatus | 'ALL'>('ALL');
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [swapDateRange, setSwapDateRange] = useState<DateRange | undefined>(
+    undefined
+  );
+  const [paybackDateRange, setPaybackDateRange] = useState<
+    DateRange | undefined
+  >(undefined);
+
   const [employeeIdOutFilter, setEmployeeIdOutFilter] = useState('');
   const [employeeIdInFilter, setEmployeeIdInFilter] = useState('');
   const [employeeFunctionFilter, setEmployeeFunctionFilter] = useState<
@@ -177,8 +208,10 @@ export default function AdminDashboardPage() {
     queryKey: [
       'adminSwapRequests',
       statusFilter,
-      dateRange?.from?.toISOString(),
-      dateRange?.to?.toISOString(),
+      swapDateRange?.from?.toISOString(),
+      swapDateRange?.to?.toISOString(), // <-- Mudou aqui
+      paybackDateRange?.from?.toISOString(),
+      paybackDateRange?.to?.toISOString(), // <-- Adicionado aqui
       employeeIdOutFilter,
       employeeIdInFilter,
       employeeFunctionFilter,
@@ -190,8 +223,10 @@ export default function AdminDashboardPage() {
     ],
     queryFn: () =>
       fetchSwapRequests(
+        // <-- Passa os novos ranges
         statusFilter,
-        dateRange,
+        swapDateRange,
+        paybackDateRange,
         sortColumn,
         sortDirection,
         employeeIdOutFilter,
@@ -274,8 +309,12 @@ export default function AdminDashboardPage() {
           <DashboardFilters
             statusFilter={statusFilter}
             setStatusFilter={setStatusFilter}
-            dateRange={dateRange}
-            setDateRange={setDateRange}
+            // dateRange={dateRange} setDateRange={setDateRange} // <-- REMOVA ESTAS
+            swapDateRange={swapDateRange}
+            setSwapDateRange={setSwapDateRange} // <-- ADICIONE ESTAS
+            paybackDateRange={paybackDateRange}
+            setPaybackDateRange={setPaybackDateRange} // <-- ADICIONE ESTAS
+            // Passa todos os outros filtros também
             employeeIdOutFilter={employeeIdOutFilter}
             setEmployeeIdOutFilter={setEmployeeIdOutFilter}
             employeeIdInFilter={employeeIdInFilter}

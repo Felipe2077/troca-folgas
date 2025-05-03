@@ -11,10 +11,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { formatDate } from '@/lib/utils';
+import { cn, formatDate } from '@/lib/utils';
 import { SwapEventType, SwapRequest, SwapStatus } from '@repo/shared-types'; // Importa tipos necessários
 import { UseMutationResult } from '@tanstack/react-query'; // Tipagem da mutação
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Link2 } from 'lucide-react';
 
 // Importa as novas células
 import { ActionsCell } from './cells/ActionsCell';
@@ -117,8 +117,25 @@ export function RequestsTable({
       </TableHeader>
       <TableBody>
         {requests.map((req) => (
-          <TableRow key={req.id}>
-            <TableCell className="font-medium">{req.id}</TableCell>
+          <TableRow
+            key={req.id}
+            className={cn(
+              'hover:bg-muted/50', // Mantém o estilo de hover
+              req.eventType === SwapEventType.SUBSTITUICAO &&
+                'bg-neutral-950/80 dark:bg-neutral-50/5' // Ex: Fundo 'muted' com baixa opacidade
+              // Ajuste 'bg-muted/20 dark:bg-muted/10' para a cor/opacidade que achar melhor.
+              // Poderia ser 'bg-blue-950', 'bg-slate-100 dark:bg-slate-900', etc.
+            )}
+          >
+            <TableCell className="font-medium">
+              <div className="flex items-center">
+                {/* Usa flex para alinhar ícone e texto */}
+                {req.isMirror && (
+                  <Link2 className="h-3 w-3 mr-1.5 text-muted-foreground flex-shrink-0" /> // Ícone antes do ID se for espelho
+                )}
+                {req.id}
+              </div>
+            </TableCell>
             <TableCell className="text-center">{req.employeeIdOut}</TableCell>
             <TableCell className="text-center">{req.employeeIdIn}</TableCell>
             <TableCell className="text-center">
@@ -138,6 +155,11 @@ export function RequestsTable({
                   req.eventType === SwapEventType.TROCA
                     ? 'secondary'
                     : 'default'
+                }
+                className={
+                  req.eventType === SwapEventType.TROCA
+                    ? 'bg-cyan-600'
+                    : 'bg-purple-600'
                 }
               >
                 {req.eventType}
