@@ -38,6 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useAuth } from '@/contexts/AuthContext';
 import { cn, formatDate, getStatusBadgeClasses } from '@/lib/utils';
 import {
   Role,
@@ -51,10 +52,12 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  CheckCircle,
   Loader2,
   MoreHorizontal,
 } from 'lucide-react'; // <-- MODIFICADO: Adiciona ícones de seta
 import { useState } from 'react'; // <-- MODIFICADO: Importa React explicitamente se precisar de Fragments <>
+import { DateRange } from 'react-day-picker';
 import { toast } from 'sonner';
 
 // --- Tipos Específicos da Página ---
@@ -66,21 +69,30 @@ type SortableColumn = 'createdAt' | 'swapDate' | 'paybackDate' | 'id'; // <-- AD
 // Função fetchSwapRequests (MODIFICADA para usar sortBy/sortOrder corretamente)
 async function fetchSwapRequests(
   statusFilter: SwapStatus | 'ALL',
-  sortBy: SortableColumn, // Recebe sortBy
-  sortOrder: 'asc' | 'desc' // Recebe sortOrder
+  dateRange: DateRange | undefined,
+  sortBy: SortableColumn,
+  sortOrder: 'asc' | 'desc',
+  token: string | null // <-- Precisa do token
 ): Promise<SwapRequest[]> {
-  const token = localStorage.getItem('authToken');
   if (!token) {
-    throw new Error('Token não encontrado');
-  }
+    console.warn('fetchSwapRequests chamado sem token');
+    return [];
+  } // Retorna vazio se não tiver token
 
   let apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/requests`;
   const queryParams = new URLSearchParams();
-
   if (statusFilter !== 'ALL') {
     queryParams.append('status', statusFilter);
   }
-  // *** MODIFICADO: Adiciona sortBy e sortOrder aos parâmetros ***
+  if (dateRange?.from) {
+    queryParams.append(
+      'startDate',
+      dateRange.from.toISOString().substring(0, 10)
+    );
+  } // Envia só YYYY-MM-DD
+  if (dateRange?.to) {
+    queryParams.append('endDate', dateRange.to.toISOString().substring(0, 10));
+  } // Envia só YYYY-MM-DD
   queryParams.append('sortBy', sortBy);
   queryParams.append('sortOrder', sortOrder);
 
@@ -88,21 +100,13 @@ async function fetchSwapRequests(
   if (queryString) {
     apiUrl += `?${queryString}`;
   }
-
   console.log(`>>> Fetching requests with URL: ${apiUrl}`);
 
   const response = await fetch(apiUrl, {
-    method: 'GET', // Certifica que o método GET está explícito (embora seja default)
     headers: { Authorization: `Bearer ${token}` },
   });
-
   if (!response.ok) {
-    const errorData = await response
-      .json()
-      .catch(() => ({ message: `Erro ${response.status}` }));
-    throw new Error(
-      errorData.message || `Falha ao buscar solicitações (${response.status})`
-    );
+    /*...*/ throw new Error('Falha ao buscar solicitações.');
   }
   const data = await response.json();
   return data.requests || [];
@@ -142,6 +146,7 @@ export default function AdminDashboardPage() {
   // ADICIONADO: Estados para ordenação
   const [sortColumn, setSortColumn] = useState<SortableColumn>('createdAt'); // Padrão: createdAt
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc'); // Padrão: desc
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   const queryClient = useQueryClient();
 
@@ -160,22 +165,20 @@ export default function AdminDashboardPage() {
     data,
     token,
   }: UpdateRequestParams): Promise<SwapRequest> {
+    if (!token) throw new Error('Token não fornecido para updateRequestApi');
     const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/requests/${requestId}`;
     console.log(`>>> [updateRequestApi] PATCH ${apiUrl} with data:`, data);
-
     const response = await fetch(apiUrl, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(data), // Envia { status: NOVO_STATUS } ou { observation: ... }
+      body: JSON.stringify(data),
     });
-
     console.log(
       `>>> [updateRequestApi] Fetch response status: ${response.status}`
     );
-
     if (!response.ok) {
       const errorData = await response
         .json()
@@ -183,25 +186,33 @@ export default function AdminDashboardPage() {
       throw new Error(errorData.message || 'Falha ao atualizar solicitação.');
     }
     const responseData = await response.json();
+    if (!responseData.request)
+      throw new Error("Resposta da API inválida (sem 'request')");
     return responseData.request;
   }
+
   // Mutação para ATUALIZAR (Status ou Observação)
   const updateRequestMutation = useMutation<
     SwapRequest,
     Error,
     { requestId: number; data: SwapRequestUpdateData }
   >({
-    // A função da mutação recebe o ID e os dados a serem atualizados
     mutationFn: ({ requestId, data }) => {
       if (!token) throw new Error('Token não encontrado para mutação.');
+      // Chama a função de API genérica
       return updateRequestApi({ requestId, data, token });
     },
-    onSuccess: (updatedRequest) => {
-      toast.success(`Solicitação ${updatedRequest.id} atualizada com sucesso!`);
-      // Invalida a query da lista para atualizar a tabela
-      queryClient.invalidateQueries({ queryKey: ['adminSwapRequests'] });
-      // Se tivéssemos um estado para o dialog de observação, limparíamos aqui também
-      // setEditingRequest(null);
+    onSuccess: (updatedRequest, variables) => {
+      // Mensagem específica se foi mudança de status
+      if (variables.data.status) {
+        toast.success(
+          `Status da solicitação ${variables.requestId} atualizado para ${variables.data.status}!`
+        );
+      }
+      // Poderia adicionar outra para observação se quisesse
+      queryClient.invalidateQueries({ queryKey: ['adminSwapRequests'] }); // Invalida sempre para garantir
+      // Se o dialog de observação estiver aberto e for esta request, fecha? Ou deixa aberto?
+      // if (editingRequest?.id === variables.requestId) { setEditingRequest(null); }
     },
     onError: (error) => {
       console.error('Erro ao atualizar solicitação:', error);
@@ -210,11 +221,24 @@ export default function AdminDashboardPage() {
   });
 
   // Handler específico para mudança de Status (chamado pelo DropdownMenuItem)
-  const handleStatusUpdate = (requestId: number, newStatus: SwapStatus) => {
-    console.log(`Updating request ${requestId} status to ${newStatus}`);
-    // Chama a mutação passando apenas o campo status
+  const handleStatusUpdate = (
+    requestId: number,
+    currentStatus: SwapStatus,
+    newStatus: SwapStatus
+  ) => {
+    // Não faz nada se clicar no status atual
+    if (currentStatus === newStatus) return;
+    console.log(
+      `[handleStatusUpdate] Preparando para chamar mutate com requestId: ${requestId}, newStatus: ${newStatus}`
+    );
+
+    console.log(
+      `Updating request ${requestId} status from ${currentStatus} to ${newStatus}`
+    );
+    // Chama a mutação genérica passando apenas o campo status
     updateRequestMutation.mutate({ requestId, data: { status: newStatus } });
   };
+  const { token, user: loggedInUser } = useAuth();
 
   // Query para buscar as solicitações (MODIFICADA queryKey e queryFn)
   const {
@@ -223,10 +247,22 @@ export default function AdminDashboardPage() {
     isError,
     error,
   } = useQuery<SwapRequest[], Error>({
-    // Query key agora inclui filtro E ordenação
-    queryKey: ['adminSwapRequests', statusFilter, sortColumn, sortDirection],
-    // queryFn agora chama fetchSwapRequests passando filtro E ordenação
-    queryFn: () => fetchSwapRequests(statusFilter, sortColumn, sortDirection),
+    queryKey: [
+      'adminSwapRequests',
+      statusFilter,
+      dateRange,
+      sortColumn,
+      sortDirection,
+    ],
+    queryFn: () =>
+      fetchSwapRequests(
+        statusFilter,
+        dateRange,
+        sortColumn,
+        sortDirection,
+        token
+      ), // Passa token
+    enabled: !!token, // Só roda se tiver token
     refetchOnWindowFocus: false,
     onError: (err) => {
       console.error('Erro ao buscar dados da dashboard:', err);
@@ -375,22 +411,17 @@ export default function AdminDashboardPage() {
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          {/* O Badge agora está dentro do Trigger */}
+                          {/* Badge clicável como gatilho */}
                           <Button
                             variant="ghost"
-                            size="sm"
-                            className="p-0 h-auto font-normal"
+                            className="p-0 h-auto font-normal data-[state=open]:bg-muted"
                           >
-                            {' '}
-                            {/* Botão invisível para área de clique */}
                             <Badge
                               className={cn(
                                 'cursor-pointer',
                                 getStatusBadgeClasses(req.status)
                               )}
                             >
-                              {' '}
-                              {/* Aplica classes dinâmicas */}
                               {req.status}
                             </Badge>
                           </Button>
@@ -400,41 +431,39 @@ export default function AdminDashboardPage() {
                             Mudar Status Para:
                           </DropdownMenuLabel>
                           <DropdownMenuSeparator />
-                          {/* Mapeia TODOS os status possíveis do Enum/Objeto */}
+                          {/* Itera sobre os valores de SwapStatus */}
                           {Object.values(SwapStatus).map((statusOption) => (
                             <DropdownMenuItem
                               key={statusOption}
-                              // Chama o handler para atualizar o status
-                              onSelect={(e) => {
-                                e.preventDefault(); // Previne fechar menu antes da action? Testar.
-                                handleStatusUpdate(req.id, statusOption);
-                              }}
-                              // Desabilita se já for o status atual ou se a mutação estiver rodando
+                              // Chama handler com ID e NOVO status
+                              onSelect={() =>
+                                handleStatusUpdate(
+                                  req.id,
+                                  req.status,
+                                  statusOption
+                                )
+                              }
+                              // Desabilita se for o status atual ou se a mutação geral estiver rodando
                               disabled={
                                 req.status === statusOption ||
                                 updateRequestMutation.isPending
                               }
                             >
-                              {/* Feedback de Loading específico */}
-                              {updateRequestMutation.isPending &&
-                                updateRequestMutation.variables?.requestId ===
-                                  req.id &&
-                                updateRequestMutation.variables?.data.status ===
-                                  statusOption && (
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                )}
-                              {/* Exibe a opção de status */}
+                              {/* Feedback visual opcional no item */}
                               <Badge
                                 variant="outline"
                                 className={cn(
-                                  'mr-2 border-none p-0',
+                                  'mr-2 border-none p-0 h-2 w-2',
                                   getStatusBadgeClasses(statusOption)
                                 )}
                               >
-                                .
-                              </Badge>{' '}
-                              {/* Bolinha colorida */}
+                                &nbsp;
+                              </Badge>
                               {statusOption}
+                              {/* Ícone de check se for o status atual */}
+                              {req.status === statusOption && (
+                                <CheckCircle className="ml-auto h-4 w-4 opacity-50" />
+                              )}
                             </DropdownMenuItem>
                           ))}
                         </DropdownMenuContent>
