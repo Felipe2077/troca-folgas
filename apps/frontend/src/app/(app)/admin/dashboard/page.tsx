@@ -18,6 +18,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
@@ -37,7 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { cn, formatDate } from '@/lib/utils';
+import { cn, formatDate, getStatusBadgeClasses } from '@/lib/utils';
 import {
   Role,
   SwapEventType,
@@ -144,6 +145,77 @@ export default function AdminDashboardPage() {
 
   const queryClient = useQueryClient();
 
+  interface SwapRequestUpdateData {
+    status?: SwapStatus;
+    observation?: string | null;
+  }
+  interface UpdateRequestParams {
+    requestId: number;
+    data: SwapRequestUpdateData;
+    token: string;
+  }
+  // Função que chama a API PATCH unificada
+  async function updateRequestApi({
+    requestId,
+    data,
+    token,
+  }: UpdateRequestParams): Promise<SwapRequest> {
+    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/requests/${requestId}`;
+    console.log(`>>> [updateRequestApi] PATCH ${apiUrl} with data:`, data);
+
+    const response = await fetch(apiUrl, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data), // Envia { status: NOVO_STATUS } ou { observation: ... }
+    });
+
+    console.log(
+      `>>> [updateRequestApi] Fetch response status: ${response.status}`
+    );
+
+    if (!response.ok) {
+      const errorData = await response
+        .json()
+        .catch(() => ({ message: `Erro ${response.status}` }));
+      throw new Error(errorData.message || 'Falha ao atualizar solicitação.');
+    }
+    const responseData = await response.json();
+    return responseData.request;
+  }
+  // Mutação para ATUALIZAR (Status ou Observação)
+  const updateRequestMutation = useMutation<
+    SwapRequest,
+    Error,
+    { requestId: number; data: SwapRequestUpdateData }
+  >({
+    // A função da mutação recebe o ID e os dados a serem atualizados
+    mutationFn: ({ requestId, data }) => {
+      if (!token) throw new Error('Token não encontrado para mutação.');
+      return updateRequestApi({ requestId, data, token });
+    },
+    onSuccess: (updatedRequest) => {
+      toast.success(`Solicitação ${updatedRequest.id} atualizada com sucesso!`);
+      // Invalida a query da lista para atualizar a tabela
+      queryClient.invalidateQueries({ queryKey: ['adminSwapRequests'] });
+      // Se tivéssemos um estado para o dialog de observação, limparíamos aqui também
+      // setEditingRequest(null);
+    },
+    onError: (error) => {
+      console.error('Erro ao atualizar solicitação:', error);
+      toast.error(error.message || 'Erro ao atualizar solicitação.');
+    },
+  });
+
+  // Handler específico para mudança de Status (chamado pelo DropdownMenuItem)
+  const handleStatusUpdate = (requestId: number, newStatus: SwapStatus) => {
+    console.log(`Updating request ${requestId} status to ${newStatus}`);
+    // Chama a mutação passando apenas o campo status
+    updateRequestMutation.mutate({ requestId, data: { status: newStatus } });
+  };
+
   // Query para buscar as solicitações (MODIFICADA queryKey e queryFn)
   const {
     data: requests,
@@ -160,35 +232,6 @@ export default function AdminDashboardPage() {
       console.error('Erro ao buscar dados da dashboard:', err);
     },
   });
-
-  // Mutation para marcar como não realizada (mantida como estava)
-  const markAsNotRealizedMutation = useMutation<SwapRequest, Error, number>({
-    mutationFn: async (requestId) => {
-      const token = localStorage.getItem('authToken');
-      if (!token) throw new Error('Token não encontrado para mutação.');
-      return markRequestAsNotRealizedApi({ requestId, token });
-    },
-    onSuccess: (updatedRequest) => {
-      console.log('Status atualizado com sucesso para:', updatedRequest.status);
-      queryClient.invalidateQueries({ queryKey: ['adminSwapRequests'] });
-      toast.success('Status da solicitação atualizado com sucesso!');
-    },
-    onError: (error) => {
-      console.error('Erro ao marcar como não realizada:', error);
-      toast.error(error.message || 'Erro ao marcar como não realizada.');
-    },
-  });
-
-  // Handler para marcar como não realizada (mantido como estava)
-  const handleMarkAsNotRealized = (requestId: number) => {
-    if (
-      window.confirm(
-        `Tem certeza que deseja marcar a solicitação ID ${requestId} como NÃO REALIZADA?`
-      )
-    ) {
-      markAsNotRealizedMutation.mutate(requestId);
-    }
-  };
 
   // ADICIONADO: Handler para trocar a ordenação
   const handleSort = (column: SortableColumn) => {
@@ -330,15 +373,72 @@ export default function AdminDashboardPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={
-                          req.status === SwapStatus.NAO_REALIZADA
-                            ? 'destructive'
-                            : 'default'
-                        }
-                      >
-                        {req.status}
-                      </Badge>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          {/* O Badge agora está dentro do Trigger */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="p-0 h-auto font-normal"
+                          >
+                            {' '}
+                            {/* Botão invisível para área de clique */}
+                            <Badge
+                              className={cn(
+                                'cursor-pointer',
+                                getStatusBadgeClasses(req.status)
+                              )}
+                            >
+                              {' '}
+                              {/* Aplica classes dinâmicas */}
+                              {req.status}
+                            </Badge>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                          <DropdownMenuLabel>
+                            Mudar Status Para:
+                          </DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          {/* Mapeia TODOS os status possíveis do Enum/Objeto */}
+                          {Object.values(SwapStatus).map((statusOption) => (
+                            <DropdownMenuItem
+                              key={statusOption}
+                              // Chama o handler para atualizar o status
+                              onSelect={(e) => {
+                                e.preventDefault(); // Previne fechar menu antes da action? Testar.
+                                handleStatusUpdate(req.id, statusOption);
+                              }}
+                              // Desabilita se já for o status atual ou se a mutação estiver rodando
+                              disabled={
+                                req.status === statusOption ||
+                                updateRequestMutation.isPending
+                              }
+                            >
+                              {/* Feedback de Loading específico */}
+                              {updateRequestMutation.isPending &&
+                                updateRequestMutation.variables?.requestId ===
+                                  req.id &&
+                                updateRequestMutation.variables?.data.status ===
+                                  statusOption && (
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                )}
+                              {/* Exibe a opção de status */}
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  'mr-2 border-none p-0',
+                                  getStatusBadgeClasses(statusOption)
+                                )}
+                              >
+                                .
+                              </Badge>{' '}
+                              {/* Bolinha colorida */}
+                              {statusOption}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                     <TableCell className="whitespace-normal max-w-[350px] break-words">
                       {req.observation || '-'}
@@ -364,22 +464,6 @@ export default function AdminDashboardPage() {
                             className="cursor-pointer"
                           >
                             Adicionar/Ver Observação
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onSelect={(e) => {
-                              e.preventDefault();
-                              handleMarkAsNotRealized(req.id);
-                            }}
-                            disabled={
-                              req.status === SwapStatus.NAO_REALIZADA ||
-                              markAsNotRealizedMutation.isPending
-                            }
-                            className="text-red-600 focus:bg-red-100 focus:text-red-700 cursor-pointer"
-                          >
-                            {markAsNotRealizedMutation.isPending &&
-                            markAsNotRealizedMutation.variables === req.id
-                              ? 'Marcando...'
-                              : 'Marcar como Não Realizada'}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
