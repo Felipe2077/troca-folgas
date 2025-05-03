@@ -113,7 +113,7 @@ async function updateRequestApi({
 }: UpdateRequestParams): Promise<SwapRequest> {
   // ... (código da função como na resposta #196, com a URL corrigida) ...
   if (!token) throw new Error('Token não fornecido para updateRequestApi');
-  const apiUrl = `<span class="math-inline">\{process\.env\.NEXT\_PUBLIC\_API\_URL\}/api/requests/</span>{requestId}`;
+  const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/requests/${requestId}`;
   const response = await fetch(apiUrl, {
     method: 'PATCH',
     headers: {
