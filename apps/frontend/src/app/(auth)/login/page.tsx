@@ -164,12 +164,12 @@ export default function LoginPage() {
               {/* Campo Identificador */}
               <div className="grid gap-2 mt-10">
                 <Label htmlFor="loginIdentifier" className="md:text-base">
-                  Identificador (Email/CPF)
+                  Crachá
                 </Label>
                 <Input
                   id="loginIdentifier"
                   type="text"
-                  placeholder="Digite o CPF"
+                  placeholder="Digite seu crachá (5-6 dígitos)"
                   required
                   value={loginIdentifier}
                   onChange={(e) => setLoginIdentifier(e.target.value)}

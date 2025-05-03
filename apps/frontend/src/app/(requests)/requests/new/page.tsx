@@ -227,12 +227,10 @@ export default function NewRequestPage() {
               <div className="space-y-1">
                 {/* --- Campo employeeIdOut --- */}
                 <div className="grid gap-1.5 ">
-                  <Label htmlFor="employeeIdOut">
-                    Funcionário de Saída (Crachá)
-                  </Label>
+                  <Label htmlFor="employeeIdOut">Crachá de Quem Sai</Label>
                   <Input
                     id="employeeIdOut"
-                    placeholder="Apenas números"
+                    placeholder="Crachá (5-6 dígitos)"
                     required
                     value={employeeIdOut}
                     type="tel"
@@ -327,12 +325,10 @@ export default function NewRequestPage() {
               <div className="space-y-1">
                 {/* --- Campo employeeIdIn --- */}
                 <div className="grid gap-1.5">
-                  <Label htmlFor="employeeIdIn">
-                    Funcionário de Entrada (Crachá)
-                  </Label>
+                  <Label htmlFor="employeeIdIn">Crachá de Quem Entra</Label>
                   <Input
                     id="employeeIdIn"
-                    placeholder="Apenas números"
+                    placeholder="Crachá (5-6 dígitos)"
                     required
                     value={employeeIdIn}
                     type="tel"

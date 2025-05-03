@@ -167,9 +167,7 @@ export default function CreateUserPage() {
 
             {/* Campo Identificador Login */}
             <div className="grid gap-1.5 my-5">
-              <Label htmlFor="loginIdentifier">
-                Identificador Login (Email/CPF/Matrícula)
-              </Label>
+              <Label htmlFor="loginIdentifier">Crachá</Label>
               <Input
                 id="loginIdentifier"
                 value={loginIdentifier}
@@ -182,6 +180,7 @@ export default function CreateUserPage() {
                 className={cn(
                   validationErrors?.loginIdentifier && 'border-destructive'
                 )}
+                placeholder="Crachá (5-6 dígitos)"
               />
               {validationErrors?.loginIdentifier?._errors?.[0] && (
                 <p className="text-sm font-medium text-destructive">

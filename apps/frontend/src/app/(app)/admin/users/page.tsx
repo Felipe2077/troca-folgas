@@ -221,9 +221,7 @@ export default function AdminUsersPage() {
                 <TableRow>
                   <TableHead className="w-[80px] text-base">ID</TableHead>
                   <TableHead className="text-base">Nome</TableHead>
-                  <TableHead className="text-base">
-                    Identificador Login
-                  </TableHead>
+                  <TableHead className="text-base">Crachá</TableHead>
                   <TableHead className="text-base">Role</TableHead>
                   {/* <-- Header Status Ativo --> */}
                   <TableHead className="text-base">Status Ativo</TableHead>
