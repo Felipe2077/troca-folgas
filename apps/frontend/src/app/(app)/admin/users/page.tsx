@@ -1,6 +1,7 @@
 // apps/frontend/src/app/admin/users/page.tsx - COM ATIVAR/DESATIVAR FUNCIONAL
 'use client';
 
+import { EditUserDialog } from '@/components/admin/EditUserDialog';
 // --- Imports ---
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Badge } from '@/components/ui/badge';
@@ -44,6 +45,7 @@ import {
   PlusCircle,
 } from 'lucide-react'; // Adiciona ícones necessários
 import Link from 'next/link';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
 // --- Funções de API Call ---
@@ -116,6 +118,7 @@ async function toggleUserStatusApi({
 export default function AdminUsersPage() {
   const { token, user: loggedInUser } = useAuth(); // Pega token E usuário logado
   const queryClient = useQueryClient();
+  const [editingUser, setEditingUser] = useState<PublicUser | null>(null);
 
   // Query para buscar usuários (mantida)
   const {
@@ -275,7 +278,13 @@ export default function AdminUsersPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                          <DropdownMenuItem disabled>Editar</DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setEditingUser(user)}
+                            disabled={loggedInUser?.id === user.id}
+                            className="cursor-pointer"
+                          >
+                            Editar
+                          </DropdownMenuItem>
                           {/* Placeholder */}
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
@@ -312,8 +321,14 @@ export default function AdminUsersPage() {
           )}
         </CardContent>
       </Card>
-      {/* Observation Dialog não é usado aqui */}
-      {/* <ObservationDialog request={editingRequest} onOpenChange={(open) => { if (!open) { setEditingRequest(null); } }}/> */}
+      <EditUserDialog
+        user={editingUser}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingUser(null); // Limpa o estado para fechar o dialog
+          }
+        }}
+      />
     </ProtectedRoute>
   );
 }

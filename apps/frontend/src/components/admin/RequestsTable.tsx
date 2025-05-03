@@ -74,57 +74,65 @@ export function RequestsTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[60px]">ID</TableHead>
-          <TableHead className="w-[100px]">Sai (Crachá)</TableHead>
-          <TableHead className="w-[100px]">Entra (Crachá)</TableHead>
-          <TableHead className="w-[120px]">Função</TableHead>
-          <TableHead className="w-[130px]">
+          <TableHead className="w-[60px] text-center">ID</TableHead>
+          <TableHead className="w-[100px] text-center">Sai (Crachá)</TableHead>
+          <TableHead className="w-[100px] text-center">
+            Entra (Crachá)
+          </TableHead>
+          <TableHead className="w-[120px] text-center">Função</TableHead>
+          <TableHead className="w-[130px] text-center">
             <Button
               variant="ghost"
               onClick={() => handleSort('swapDate')}
-              className="justify-start px-0"
+              className="justify-start px-0 text-center"
             >
               Data Troca {renderSortIcon('swapDate')}
             </Button>
           </TableHead>
-          <TableHead className="w-[130px]">
+          <TableHead className="w-[130px] text-center">
             <Button
               variant="ghost"
               onClick={() => handleSort('paybackDate')}
-              className=" justify-start px-0"
+              className=" justify-start px-0 text-center"
             >
               Data Pagamento {renderSortIcon('paybackDate')}
             </Button>
           </TableHead>
-          <TableHead className="w-[150px]">Grupo Sai</TableHead>
-          <TableHead className="w-[150px]">Grupo Entra</TableHead>
-          <TableHead className="w-[120px]">Tipo</TableHead>
-          <TableHead className="w-[120px]">Status</TableHead>
+          <TableHead className="w-[150px] text-center">Grupo Sai</TableHead>
+          <TableHead className="w-[150px] text-center">Grupo Entra</TableHead>
+          <TableHead className="w-[120px] text-center">Tipo</TableHead>
+          <TableHead className="w-[120px] text-center">Status</TableHead>
           <TableHead>Observação</TableHead>
-          <TableHead className="w-[130px]">
+          <TableHead className="w-[130px] text-center">
             <Button
               variant="ghost"
               onClick={() => handleSort('createdAt')}
-              className="justify-start"
+              className="justify-start text-center"
             >
               Criado Em {renderSortIcon('createdAt')}
             </Button>
           </TableHead>
-          <TableHead className="w-[60px]">Ações</TableHead>
+          <TableHead className="w-[60px] text-center">Ações</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {requests.map((req) => (
           <TableRow key={req.id}>
             <TableCell className="font-medium">{req.id}</TableCell>
-            <TableCell>{req.employeeIdOut}</TableCell>
-            <TableCell>{req.employeeIdIn}</TableCell>
-            <TableCell>{req.employeeFunction}</TableCell>
-            <TableCell>{formatDate(req.swapDate)}</TableCell>
-            <TableCell>{formatDate(req.paybackDate)}</TableCell>
-            <TableCell>{req.groupOut}</TableCell>
-            <TableCell>{req.groupIn}</TableCell>
-            <TableCell>
+            <TableCell className="text-center">{req.employeeIdOut}</TableCell>
+            <TableCell className="text-center">{req.employeeIdIn}</TableCell>
+            <TableCell className="text-center">
+              {req.employeeFunction}
+            </TableCell>
+            <TableCell className="text-center">
+              {formatDate(req.swapDate)}
+            </TableCell>
+            <TableCell className="text-center">
+              {formatDate(req.paybackDate)}
+            </TableCell>
+            <TableCell className="text-center">{req.groupOut}</TableCell>
+            <TableCell className="text-center">{req.groupIn}</TableCell>
+            <TableCell className="text-center">
               <Badge
                 variant={
                   req.eventType === SwapEventType.TROCA
@@ -136,7 +144,7 @@ export function RequestsTable({
               </Badge>
             </TableCell>
             {/* Célula de Status usa o componente StatusCell */}
-            <TableCell>
+            <TableCell className="text-center">
               <StatusCell
                 request={req}
                 onUpdateStatus={handleStatusUpdate}
@@ -148,7 +156,7 @@ export function RequestsTable({
               // Ação de clique agora está na célula
               onClick={() => handleEditObservation(req)}
               // Muda cursor e adiciona feedback visual no hover
-              className="cursor-pointer group" // Adiciona 'group' para hover no filho se necessário
+              className="cursor-pointer group px-4" // Adiciona 'group' para hover no filho se necessário
               // Tooltip
               title={
                 req.observation
@@ -173,10 +181,12 @@ export function RequestsTable({
               {/* Adiciona um hover no texto filho quando a célula pai (group) está hover */}
               <ObservationCell
                 request={req}
-                className="group-hover:text-primary group-hover:underline"
+                className="group-hover:text-primary group-hover:underline text-center"
               />
             </TableCell>
-            <TableCell>{formatDate(req.createdAt)}</TableCell>
+            <TableCell className="text-center">
+              {formatDate(req.createdAt)}
+            </TableCell>
             {/* Célula de Ações usa o componente ActionsCell */}
             <TableCell>
               <ActionsCell request={req} />
