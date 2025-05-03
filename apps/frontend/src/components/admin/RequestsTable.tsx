@@ -143,10 +143,36 @@ export function RequestsTable({
               />
             </TableCell>
             {/* Célula de Observação usa o componente ObservationCell */}
-            <TableCell>
+            <TableCell
+              // Ação de clique agora está na célula
+              onClick={() => handleEditObservation(req)}
+              // Muda cursor e adiciona feedback visual no hover
+              className="cursor-pointer group" // Adiciona 'group' para hover no filho se necessário
+              // Tooltip
+              title={
+                req.observation
+                  ? 'Clique para editar observação'
+                  : 'Clique para adicionar observação'
+              }
+              // Acessibilidade para teclado
+              role="button" // Informa que se comporta como botão
+              tabIndex={0} // Permite focar com Tab
+              onKeyDown={(e) => {
+                // Permite ativar com Enter ou Espaço
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault(); // Previne scroll da página com Espaço
+                  handleEditObservation(req);
+                }
+              }}
+              aria-label={
+                req.observation ? 'Editar observação' : 'Adicionar observação'
+              } // Label para leitor de tela
+            >
+              {/* Renderiza a célula de conteúdo (agora apenas visual) */}
+              {/* Adiciona um hover no texto filho quando a célula pai (group) está hover */}
               <ObservationCell
                 request={req}
-                onEdit={handleEditObservation} // Passa a função que abre o Dialog
+                className="group-hover:text-primary group-hover:underline"
               />
             </TableCell>
             <TableCell>{formatDate(req.createdAt)}</TableCell>
