@@ -1,8 +1,10 @@
-// apps/frontend/src/app/admin/dashboard/page.tsx - COM FILTRO E ORDENAÇÃO
+// apps/frontend/src/app/(app)/admin/dashboard/page.tsx - COMPLETO COM FILTROS
 'use client';
 
 // --- Imports ---
+import { DashboardFilters } from '@/components/admin/DashboardFilters'; // <-- Componente de Filtros
 import { ObservationDialog } from '@/components/admin/ObservationDialog';
+import { RequestsTable } from '@/components/admin/RequestsTable'; // <-- Componente da Tabela
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import {
   Card,
@@ -11,43 +13,49 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
-import { Role, SwapRequest, SwapStatus } from '@repo/shared-types';
+import {
+  EmployeeFunction,
+  ReliefGroup,
+  Role,
+  SwapEventType,
+  SwapRequest,
+  SwapStatus,
+} from '@repo/shared-types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-// Imports de ícones (Loader2 já estava, adiciona os de seta)
-import { RequestsTable } from '@/components/admin/RequestsTable';
-import { Loader2 } from 'lucide-react'; // <-- MODIFICADO: Adiciona ícones de seta
-import { useState } from 'react'; // <-- MODIFICADO: Importa React explicitamente se precisar de Fragments <>
+import { Loader2 } from 'lucide-react'; // Ícones
+import { useState } from 'react';
 import { DateRange } from 'react-day-picker';
 import { toast } from 'sonner';
 
-// --- Tipos Específicos da Página ---
-// Define as colunas que permitiremos ordenar (baseado no schema Zod do backend)
-type SortableColumn = 'createdAt' | 'swapDate' | 'paybackDate' | 'id'; // <-- ADICIONADO: Tipo para colunas ordenáveis
+// --- Tipos Específicos ---
+type SortableColumn = 'createdAt' | 'swapDate' | 'paybackDate' | 'id';
+interface SwapRequestUpdateData {
+  status?: SwapStatus;
+  observation?: string | null;
+}
+interface UpdateRequestParams {
+  requestId: number;
+  data: SwapRequestUpdateData;
+  token: string;
+}
 
-// --- Funções de API Call ---
-
-// Função fetchSwapRequests (MODIFICADA para usar sortBy/sortOrder corretamente)
+// --- Funções API ---
+// Função fetchSwapRequests (aceita todos os filtros e ordenação)
 async function fetchSwapRequests(
   statusFilter: SwapStatus | 'ALL',
   dateRange: DateRange | undefined,
   sortBy: SortableColumn,
   sortOrder: 'asc' | 'desc',
-  token: string | null // <-- Precisa do token
+  employeeIdOut: string,
+  employeeIdIn: string,
+  employeeFunction: EmployeeFunction | 'ALL',
+  groupOut: ReliefGroup | 'ALL',
+  groupIn: ReliefGroup | 'ALL',
+  eventType: SwapEventType | 'ALL',
+  token: string | null
 ): Promise<SwapRequest[]> {
-  if (!token) {
-    console.warn('fetchSwapRequests chamado sem token');
-    return [];
-  } // Retorna vazio se não tiver token
-
+  if (!token) return [];
   let apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/requests`;
   const queryParams = new URLSearchParams();
   if (statusFilter !== 'ALL') {
@@ -58,158 +66,108 @@ async function fetchSwapRequests(
       'startDate',
       dateRange.from.toISOString().substring(0, 10)
     );
-  } // Envia só YYYY-MM-DD
+  }
   if (dateRange?.to) {
     queryParams.append('endDate', dateRange.to.toISOString().substring(0, 10));
-  } // Envia só YYYY-MM-DD
+  }
+  if (employeeIdOut.trim()) {
+    queryParams.append('employeeIdOut', employeeIdOut.trim());
+  }
+  if (employeeIdIn.trim()) {
+    queryParams.append('employeeIdIn', employeeIdIn.trim());
+  }
+  if (employeeFunction !== 'ALL') {
+    queryParams.append('employeeFunction', employeeFunction);
+  }
+  if (groupOut !== 'ALL') {
+    queryParams.append('groupOut', groupOut);
+  }
+  if (groupIn !== 'ALL') {
+    queryParams.append('groupIn', groupIn);
+  }
+  if (eventType !== 'ALL') {
+    queryParams.append('eventType', eventType);
+  }
   queryParams.append('sortBy', sortBy);
   queryParams.append('sortOrder', sortOrder);
-
   const queryString = queryParams.toString();
   if (queryString) {
     apiUrl += `?${queryString}`;
   }
   console.log(`>>> Fetching requests with URL: ${apiUrl}`);
-
   const response = await fetch(apiUrl, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!response.ok) {
-    /*...*/ throw new Error('Falha ao buscar solicitações.');
+    throw new Error('Falha ao buscar solicitações.');
   }
   const data = await response.json();
   return data.requests || [];
 }
 
-// Função markRequestAsNotRealizedApi (mantida como estava)
-interface MarkAsNotRealizedParams {
-  requestId: number;
-  token: string;
-}
-async function markRequestAsNotRealizedApi({
+// Função updateRequestApi (para PATCH)
+async function updateRequestApi({
   requestId,
+  data,
   token,
-}: MarkAsNotRealizedParams): Promise<SwapRequest> {
-  const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/requests/${requestId}/status`;
+}: UpdateRequestParams): Promise<SwapRequest> {
+  // ... (código da função como na resposta #196, com a URL corrigida) ...
+  if (!token) throw new Error('Token não fornecido para updateRequestApi');
+  const apiUrl = `<span class="math-inline">\{process\.env\.NEXT\_PUBLIC\_API\_URL\}/api/requests/</span>{requestId}`;
   const response = await fetch(apiUrl, {
     method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}` },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
   });
   if (!response.ok) {
     const errorData = await response
       .json()
       .catch(() => ({ message: `Erro ${response.status}` }));
-    throw new Error(errorData.message || 'Falha ao marcar como não realizada.');
+    throw new Error(errorData.message || 'Falha ao atualizar solicitação.');
   }
-  const data = await response.json();
-  return data.request;
+  const responseData = await response.json();
+  if (!responseData.request)
+    throw new Error("Resposta da API inválida (sem 'request')");
+  return responseData.request;
 }
 
-// --- Componente Principal da Página ---
+// --- Componente Principal ---
 export default function AdminDashboardPage() {
-  // Estados existentes
+  // Estados para Filtros
+  const [statusFilter, setStatusFilter] = useState<SwapStatus | 'ALL'>('ALL');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [employeeIdOutFilter, setEmployeeIdOutFilter] = useState('');
+  const [employeeIdInFilter, setEmployeeIdInFilter] = useState('');
+  const [employeeFunctionFilter, setEmployeeFunctionFilter] = useState<
+    EmployeeFunction | 'ALL'
+  >('ALL');
+  const [groupOutFilter, setGroupOutFilter] = useState<ReliefGroup | 'ALL'>(
+    'ALL'
+  );
+  const [groupInFilter, setGroupInFilter] = useState<ReliefGroup | 'ALL'>(
+    'ALL'
+  );
+  const [eventTypeFilter, setEventTypeFilter] = useState<SwapEventType | 'ALL'>(
+    'ALL'
+  );
+
+  // Estados para Ordenação
+  const [sortColumn, setSortColumn] = useState<SortableColumn>('createdAt');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  // Estado para Dialog de Observação
   const [editingRequest, setEditingRequest] = useState<SwapRequest | null>(
     null
   );
-  const [statusFilter, setStatusFilter] = useState<SwapStatus | 'ALL'>('ALL');
-  // ADICIONADO: Estados para ordenação
-  const [sortColumn, setSortColumn] = useState<SortableColumn>('createdAt'); // Padrão: createdAt
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc'); // Padrão: desc
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
+  // Hooks
   const queryClient = useQueryClient();
-
-  interface SwapRequestUpdateData {
-    status?: SwapStatus;
-    observation?: string | null;
-  }
-  interface UpdateRequestParams {
-    requestId: number;
-    data: SwapRequestUpdateData;
-    token: string;
-  }
-  // Função que chama a API PATCH unificada
-  async function updateRequestApi({
-    requestId,
-    data,
-    token,
-  }: UpdateRequestParams): Promise<SwapRequest> {
-    if (!token) throw new Error('Token não fornecido para updateRequestApi');
-    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/requests/${requestId}`;
-    console.log(`>>> [updateRequestApi] PATCH ${apiUrl} with data:`, data);
-    const response = await fetch(apiUrl, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
-    });
-    console.log(
-      `>>> [updateRequestApi] Fetch response status: ${response.status}`
-    );
-    if (!response.ok) {
-      const errorData = await response
-        .json()
-        .catch(() => ({ message: `Erro ${response.status}` }));
-      throw new Error(errorData.message || 'Falha ao atualizar solicitação.');
-    }
-    const responseData = await response.json();
-    if (!responseData.request)
-      throw new Error("Resposta da API inválida (sem 'request')");
-    return responseData.request;
-  }
-
-  // Mutação para ATUALIZAR (Status ou Observação)
-  const updateRequestMutation = useMutation<
-    SwapRequest,
-    Error,
-    { requestId: number; data: SwapRequestUpdateData }
-  >({
-    mutationFn: ({ requestId, data }) => {
-      if (!token) throw new Error('Token não encontrado para mutação.');
-      // Chama a função de API genérica
-      return updateRequestApi({ requestId, data, token });
-    },
-    onSuccess: (updatedRequest, variables) => {
-      // Mensagem específica se foi mudança de status
-      if (variables.data.status) {
-        toast.success(
-          `Status da solicitação ${variables.requestId} atualizado para ${variables.data.status}!`
-        );
-      }
-      // Poderia adicionar outra para observação se quisesse
-      queryClient.invalidateQueries({ queryKey: ['adminSwapRequests'] }); // Invalida sempre para garantir
-      // Se o dialog de observação estiver aberto e for esta request, fecha? Ou deixa aberto?
-      // if (editingRequest?.id === variables.requestId) { setEditingRequest(null); }
-    },
-    onError: (error) => {
-      console.error('Erro ao atualizar solicitação:', error);
-      toast.error(error.message || 'Erro ao atualizar solicitação.');
-    },
-  });
-
-  // Handler específico para mudança de Status (chamado pelo DropdownMenuItem)
-  const handleStatusUpdate = (
-    requestId: number,
-    currentStatus: SwapStatus,
-    newStatus: SwapStatus
-  ) => {
-    // Não faz nada se clicar no status atual
-    if (currentStatus === newStatus) return;
-    console.log(
-      `[handleStatusUpdate] Preparando para chamar mutate com requestId: ${requestId}, newStatus: ${newStatus}`
-    );
-
-    console.log(
-      `Updating request ${requestId} status from ${currentStatus} to ${newStatus}`
-    );
-    // Chama a mutação genérica passando apenas o campo status
-    updateRequestMutation.mutate({ requestId, data: { status: newStatus } });
-  };
   const { token, user: loggedInUser } = useAuth();
 
-  // Query para buscar as solicitações (MODIFICADA queryKey e queryFn)
+  // Query Principal (agora com todos os filtros e ordenação)
   const {
     data: requests,
     isLoading: isQueryLoading,
@@ -219,7 +177,14 @@ export default function AdminDashboardPage() {
     queryKey: [
       'adminSwapRequests',
       statusFilter,
-      dateRange,
+      dateRange?.from?.toISOString(),
+      dateRange?.to?.toISOString(),
+      employeeIdOutFilter,
+      employeeIdInFilter,
+      employeeFunctionFilter,
+      groupOutFilter,
+      groupInFilter,
+      eventTypeFilter,
       sortColumn,
       sortDirection,
     ],
@@ -229,69 +194,103 @@ export default function AdminDashboardPage() {
         dateRange,
         sortColumn,
         sortDirection,
+        employeeIdOutFilter,
+        employeeIdInFilter,
+        employeeFunctionFilter,
+        groupOutFilter,
+        groupInFilter,
+        eventTypeFilter,
         token
-      ), // Passa token
-    enabled: !!token, // Só roda se tiver token
+      ),
+    enabled: !!token,
     refetchOnWindowFocus: false,
     onError: (err) => {
       console.error('Erro ao buscar dados da dashboard:', err);
     },
   });
 
-  // ADICIONADO: Handler para trocar a ordenação
+  // Mutação para Atualizar Status/Observação (mantida)
+  const updateRequestMutation = useMutation<
+    SwapRequest,
+    Error,
+    { requestId: number; data: SwapRequestUpdateData }
+  >({
+    mutationFn: ({ requestId, data }) => {
+      if (!token) throw new Error('Token não encontrado');
+      return updateRequestApi({ requestId, data, token });
+    },
+    onSuccess: (updatedRequest, variables) => {
+      if (variables.data.status) {
+        toast.success(
+          `Status da solicitação ${variables.requestId} atualizado!`
+        );
+      }
+      if (variables.data.observation !== undefined) {
+        toast.success(
+          `Observação da solicitação ${variables.requestId} atualizada!`
+        );
+      } // Feedback para observação
+      queryClient.invalidateQueries({ queryKey: ['adminSwapRequests'] });
+      if (editingRequest?.id === variables.requestId) {
+        setEditingRequest(null);
+      } // Fecha dialog se aberto
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Erro ao atualizar solicitação.');
+    },
+  });
+
+  // Handler para atualizar Status (mantido)
+  const handleStatusUpdate = (
+    requestId: number,
+    currentStatus: SwapStatus,
+    newStatus: SwapStatus
+  ) => {
+    if (currentStatus === newStatus || updateRequestMutation.isPending) return;
+    updateRequestMutation.mutate({ requestId, data: { status: newStatus } });
+  };
+
+  // Handler para Ordenação (mantido)
   const handleSort = (column: SortableColumn) => {
-    // Se clicou na mesma coluna, inverte a direção
     if (sortColumn === column) {
       setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
-      // Se clicou em outra coluna, define como a nova coluna e usa ordem padrão (desc)
       setSortColumn(column);
       setSortDirection('desc');
     }
   };
 
-  // ----- Lógica de Renderização -----
   return (
     <ProtectedRoute allowedRoles={[Role.ADMINISTRADOR]}>
       <Card>
         <CardHeader>
-          <CardTitle className="md:text-2xl pb-2">
-            Dashboard do Administrador
-          </CardTitle>
+          <CardTitle>Dashboard do Administrador</CardTitle>
           <CardDescription>
-            Visualização e gerenciamento das solicitações de troca e
-            substituição de folgas.
+            Visualize e gerencie as solicitações.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Bloco do Select para filtro (mantido como estava) */}
-          <div className="flex items-center gap-2 mb-4">
-            <Label htmlFor="status-filter" className="shrink-0">
-              Filtrar por Status:
-            </Label>
-            <Select
-              value={statusFilter}
-              onValueChange={(value: string) => {
-                setStatusFilter(
-                  value === 'ALL' ? 'ALL' : (value as SwapStatus)
-                );
-              }}
-            >
-              <SelectTrigger id="status-filter" className="w-[180px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">Todos</SelectItem>
-                {Object.values(SwapStatus).map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Renderiza o Componente de Filtros passando todos os estados e setters */}
+          <DashboardFilters
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            dateRange={dateRange}
+            setDateRange={setDateRange}
+            employeeIdOutFilter={employeeIdOutFilter}
+            setEmployeeIdOutFilter={setEmployeeIdOutFilter}
+            employeeIdInFilter={employeeIdInFilter}
+            setEmployeeIdInFilter={setEmployeeIdInFilter}
+            employeeFunctionFilter={employeeFunctionFilter}
+            setEmployeeFunctionFilter={setEmployeeFunctionFilter}
+            groupOutFilter={groupOutFilter}
+            setGroupOutFilter={setGroupOutFilter}
+            groupInFilter={groupInFilter}
+            setGroupInFilter={setGroupInFilter}
+            eventTypeFilter={eventTypeFilter}
+            setEventTypeFilter={setEventTypeFilter}
+          />
 
-          {/* Lógica de Loading/Error/Table */}
+          {/* Lógica de Loading/Error */}
           {isQueryLoading && (
             <div className="flex justify-center items-center min-h-[300px]">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -299,7 +298,7 @@ export default function AdminDashboardPage() {
           )}
           {isError && (
             <div className="text-center p-4 text-destructive bg-destructive/10 rounded-md">
-              Erro ao buscar solicitações
+              Erro ao buscar solicitações:{' '}
               {error?.message || 'Erro desconhecido'}
             </div>
           )}
@@ -307,24 +306,26 @@ export default function AdminDashboardPage() {
             !isError &&
             (!requests || requests.length === 0) && (
               <div className="text-center p-4 text-muted-foreground">
-                Nenhuma solicitação encontrada.
+                Nenhuma solicitação encontrada para os filtros aplicados.
               </div>
             )}
 
+          {/* Renderiza a Tabela Abstraída */}
           {!isQueryLoading && !isError && requests && requests.length > 0 && (
             <RequestsTable
               requests={requests}
               sortColumn={sortColumn}
               sortDirection={sortDirection}
-              updateRequestMutation={updateRequestMutation} // Passa o objeto da mutação
+              updateRequestMutation={updateRequestMutation} // Passa a mutação para as células
               handleSort={handleSort}
               handleStatusUpdate={handleStatusUpdate}
-              handleEditObservation={setEditingRequest} // Passa setEditingRequest diretamente
+              handleEditObservation={setEditingRequest} // Passa o setter do dialog
             />
           )}
         </CardContent>
       </Card>
 
+      {/* Dialog de Observação */}
       <ObservationDialog
         request={editingRequest}
         onOpenChange={(open) => {
