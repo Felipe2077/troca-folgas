@@ -346,6 +346,82 @@ export async function requestRoutes(fastify: FastifyInstance) {
       }
     }
   );
+  // --- NOVA Rota GET /summary (ADMIN ONLY) ---
+  fastify.get(
+    '/summary',
+    {
+      onRequest: [authenticate], // Exige autenticação
+    },
+    async (request, reply) => {
+      try {
+        // 1. Verificar se é Administrador
+        if (request.user.role !== Role.ADMINISTRADOR) {
+          return reply.status(403).send({ message: 'Acesso negado.' });
+        }
+
+        // 2. Calcular as contagens usando Prisma (em paralelo)
+        const now = new Date(); // Pega a data/hora atual para comparar
+
+        const [
+          countAgendado,
+          countRealizado,
+          countNaoRealizada,
+          countTroca,
+          countSubstituicao,
+          countAgendadoAtrasado,
+        ] = await Promise.all([
+          // Contagem por Status
+          prisma.swapRequest.count({ where: { status: SwapStatus.AGENDADO } }),
+          prisma.swapRequest.count({ where: { status: SwapStatus.REALIZADO } }),
+          prisma.swapRequest.count({
+            where: { status: SwapStatus.NAO_REALIZADA },
+          }),
+          // Contagem por Tipo
+          prisma.swapRequest.count({
+            where: { eventType: SwapEventType.TROCA },
+          }),
+          prisma.swapRequest.count({
+            where: { eventType: SwapEventType.SUBSTITUICAO },
+          }),
+          // Contagem Agendadas Atrasadas (status AGENDADO E (swapDate < agora OU paybackDate < agora))
+          prisma.swapRequest.count({
+            where: {
+              status: SwapStatus.AGENDADO,
+              OR: [
+                { swapDate: { lt: now } }, // 'lt' = less than
+                { paybackDate: { lt: now } },
+              ],
+            },
+          }),
+        ]);
+
+        // 3. Montar e retornar o objeto de resumo
+        const summary = {
+          byStatus: {
+            [SwapStatus.AGENDADO]: countAgendado,
+            [SwapStatus.REALIZADO]: countRealizado,
+            [SwapStatus.NAO_REALIZADA]: countNaoRealizada,
+          },
+          byType: {
+            [SwapEventType.TROCA]: countTroca,
+            [SwapEventType.SUBSTITUICAO]: countSubstituicao,
+          },
+          attention: {
+            scheduledPastDue: countAgendadoAtrasado,
+          },
+          // Pode adicionar mais contagens aqui se necessário
+        };
+
+        return reply.status(200).send(summary);
+      } catch (error) {
+        fastify.log.error({ msg: 'Error fetching request summary', error });
+        return reply
+          .status(500)
+          .send({ message: 'Erro interno ao buscar resumo das solicitações.' });
+      }
+    }
+  );
+  // --- FIM da Rota GET /summary ---
   // --- Rota PATCH para atualizar a observação (ADMIN) ---
   fastify.patch(
     '/:id', // Rota unificada para atualizar status e/ou observação
