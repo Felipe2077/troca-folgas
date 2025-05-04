@@ -3,6 +3,7 @@
 
 // --- Imports ---
 import { DashboardFilters } from '@/components/admin/DashboardFilters'; // <-- Componente de Filtros
+import { DashboardSummaryCards } from '@/components/admin/DashboardSummaryCards';
 import { ObservationDialog } from '@/components/admin/ObservationDialog';
 import { RequestsTable } from '@/components/admin/RequestsTable'; // <-- Componente da Tabela
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -17,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   EmployeeFunction,
   ReliefGroup,
+  RequestSummaryData,
   Role,
   SwapEventType,
   SwapRequest,
@@ -160,15 +162,45 @@ async function updateRequestApi({
 
 // --- Componente Principal ---
 export default function AdminDashboardPage() {
+  const queryClient = useQueryClient();
+  const { token, user: loggedInUser } = useAuth();
   // Estados para Filtros
   const [statusFilter, setStatusFilter] = useState<SwapStatus | 'ALL'>('ALL');
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [swapDateRange, setSwapDateRange] = useState<DateRange | undefined>(
     undefined
   );
+
   const [paybackDateRange, setPaybackDateRange] = useState<
     DateRange | undefined
   >(undefined);
+  // Query para buscar os dados do resumo para os cards
+  const { data: summaryData, isLoading: isLoadingSummary } = useQuery<
+    RequestSummaryData,
+    Error
+  >({
+    queryKey: ['requestSummary'], // Chave para o cache desta query
+    queryFn: () => fetchRequestSummary(token), // Chama a nova função de fetch
+    enabled: !!token, // Só roda se tiver token
+    staleTime: 60 * 1000, // Ex: Cache por 1 minuto
+  });
+  async function fetchRequestSummary(
+    token: string | null
+  ): Promise<RequestSummaryData> {
+    if (!token) throw new Error('Token não encontrado para buscar resumo.');
+    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/requests/summary`;
+    const response = await fetch(apiUrl, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) {
+      const errorData = await response
+        .json()
+        .catch(() => ({ message: `Erro ${response.status}` }));
+      throw new Error(errorData.message || 'Falha ao buscar resumo.');
+    }
+    // A API retorna o objeto de resumo diretamente
+    return response.json();
+  }
 
   const [employeeIdOutFilter, setEmployeeIdOutFilter] = useState('');
   const [employeeIdInFilter, setEmployeeIdInFilter] = useState('');
@@ -195,8 +227,6 @@ export default function AdminDashboardPage() {
   );
 
   // Hooks
-  const queryClient = useQueryClient();
-  const { token, user: loggedInUser } = useAuth();
 
   // Query Principal (agora com todos os filtros e ordenação)
   const {
@@ -305,6 +335,10 @@ export default function AdminDashboardPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <DashboardSummaryCards
+            summaryData={summaryData}
+            isLoading={isLoadingSummary}
+          />
           {/* Renderiza o Componente de Filtros passando todos os estados e setters */}
           <DashboardFilters
             statusFilter={statusFilter}
