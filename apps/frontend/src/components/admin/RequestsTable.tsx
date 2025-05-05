@@ -14,14 +14,26 @@ import {
 import { cn, formatDate } from '@/lib/utils';
 import { SwapEventType, SwapRequest, SwapStatus } from '@repo/shared-types'; // Importa tipos necessários
 import { UseMutationResult } from '@tanstack/react-query'; // Tipagem da mutação
-import { ArrowDown, ArrowUp, ArrowUpDown, Link2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 
 // Importa as novas células
 import { ObservationCell } from './cells/ObservationCell';
 import { StatusCell } from './cells/StatusCell';
 
 // Tipo para a coluna de ordenação (definido na página também)
-type SortableColumn = 'createdAt' | 'swapDate' | 'paybackDate' | 'id';
+type SortableColumn =
+  | 'createdAt'
+  | 'swapDate'
+  | 'paybackDate'
+  | 'id'
+  | 'employeeIdOut'
+  | 'employeeIdIn'
+  | 'employeeFunction'
+  | 'groupOut'
+  | 'groupIn'
+  | 'eventType'
+  | 'status'
+  | 'updatedAt';
 
 // Tipo para dados de atualização (definido na página também)
 interface SwapRequestUpdateData {
@@ -71,42 +83,116 @@ export function RequestsTable({
 
   return (
     <Table>
-      <TableHeader className="bg-neutral-50/30 ">
-        <TableRow className="hover:bg-amber-900/10">
-          <TableHead className="w-[60px] text-center">ID</TableHead>
-          <TableHead className="w-[100px] text-center">Sai (Crachá)</TableHead>
-          <TableHead className="w-[100px] text-center">
-            Entra (Crachá)
+      <TableHeader>
+        <TableRow>
+          {/* ID Ordenável */}
+          <TableHead className="w-[60px]">
+            <Button
+              variant="ghost"
+              onClick={() => handleSort('id')}
+              className="px-0 justify-start"
+            >
+              ID {renderSortIcon('id')}
+            </Button>
           </TableHead>
-          <TableHead className="w-[120px] text-center">Função</TableHead>
-          <TableHead className="w-[130px] text-center">
+          {/* Crachá Sai Ordenável */}
+          <TableHead className="w-[100px]">
+            <Button
+              variant="ghost"
+              onClick={() => handleSort('employeeIdOut')}
+              className="px-0 justify-start"
+            >
+              Sai (Crachá) {renderSortIcon('employeeIdOut')}
+            </Button>
+          </TableHead>
+          {/* Crachá Entra Ordenável */}
+          <TableHead className="w-[100px]">
+            <Button
+              variant="ghost"
+              onClick={() => handleSort('employeeIdIn')}
+              className="px-0 justify-start"
+            >
+              Entra (Crachá) {renderSortIcon('employeeIdIn')}
+            </Button>
+          </TableHead>
+          {/* Função Ordenável */}
+          <TableHead className="w-[120px]">
+            <Button
+              variant="ghost"
+              onClick={() => handleSort('employeeFunction')}
+              className="px-0 justify-start"
+            >
+              Função {renderSortIcon('employeeFunction')}
+            </Button>
+          </TableHead>
+          {/* Data Troca Ordenável */}
+          <TableHead className="w-[130px]">
             <Button
               variant="ghost"
               onClick={() => handleSort('swapDate')}
-              className="justify-start px-0 text-center"
+              className="px-0 justify-start"
             >
-              Data Troca {renderSortIcon('swapDate')}
+              Troca {renderSortIcon('swapDate')}
             </Button>
           </TableHead>
-          <TableHead className="w-[130px] text-center">
+          {/* Data Pagamento Ordenável */}
+          <TableHead className="w-[130px]">
             <Button
               variant="ghost"
               onClick={() => handleSort('paybackDate')}
-              className=" justify-start px-0 text-center"
+              className="px-0 justify-start"
             >
-              Data Pagamento {renderSortIcon('paybackDate')}
+              Pagamento {renderSortIcon('paybackDate')}
             </Button>
           </TableHead>
-          <TableHead className="w-[150px] text-center">Grupo Sai</TableHead>
-          <TableHead className="w-[150px] text-center">Grupo Entra</TableHead>
-          <TableHead className="w-[120px] text-center">Tipo</TableHead>
-          <TableHead className="w-[120px] text-center">Status</TableHead>
+          {/* Tipo Ordenável */}
+          <TableHead className="w-[120px]">
+            <Button
+              variant="ghost"
+              onClick={() => handleSort('eventType')}
+              className="px-0 justify-start"
+            >
+              Tipo {renderSortIcon('eventType')}
+            </Button>
+          </TableHead>
+          {/* Status Ordenável */}
+          <TableHead className="w-[120px]">
+            <Button
+              variant="ghost"
+              onClick={() => handleSort('status')}
+              className="px-0 justify-start"
+            >
+              Status {renderSortIcon('status')}
+            </Button>
+          </TableHead>
+          {/* Grupo Sai Ordenável */}
+          <TableHead className="w-[150px]">
+            <Button
+              variant="ghost"
+              onClick={() => handleSort('groupOut')}
+              className="px-0 justify-start"
+            >
+              Grupo Sai {renderSortIcon('groupOut')}
+            </Button>
+          </TableHead>
+          {/* Grupo Entra Ordenável */}
+          <TableHead className="w-[150px]">
+            <Button
+              variant="ghost"
+              onClick={() => handleSort('groupIn')}
+              className="px-0 justify-start"
+            >
+              Grupo Entra {renderSortIcon('groupIn')}
+            </Button>
+          </TableHead>
+          {/* Observação NÃO Ordenável */}
           <TableHead>Observação</TableHead>
-          <TableHead className="w-[130px] text-center">
+          {/* Criado Em Ordenável */}
+          <TableHead className="w-[130px]">
             <Button
               variant="ghost"
               onClick={() => handleSort('createdAt')}
-              className="justify-start text-center"
+              className="px-0 justify-start"
             >
               Criado Em {renderSortIcon('createdAt')}
             </Button>
@@ -119,9 +205,6 @@ export function RequestsTable({
             <TableCell className="font-medium">
               <div className="flex items-center">
                 {/* Usa flex para alinhar ícone e texto */}
-                {req.isMirror && (
-                  <Link2 className="h-3 w-3 mr-1.5 text-muted-foreground flex-shrink-0" /> // Ícone antes do ID se for espelho
-                )}
                 {req.id}
               </div>
             </TableCell>

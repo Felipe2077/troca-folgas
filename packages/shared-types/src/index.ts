@@ -255,8 +255,26 @@ export const swapRequestUpdateSchema = z
 export type SwapRequestUpdateInput = z.infer<typeof swapRequestUpdateSchema>;
 
 const sortableColumns = z
-  .enum(['createdAt', 'swapDate', 'paybackDate', 'id'])
+  .enum([
+    'createdAt',
+    'swapDate',
+    'paybackDate',
+    'id', // Já existentes
+    'employeeIdOut',
+    'employeeIdIn',
+    'employeeFunction', // Novos
+    'groupOut',
+    'groupIn',
+    'eventType',
+    'status', // Novos
+    // 'observation', // Ordenar por texto longo pode ser ineficiente
+    // 'submittedById', // Menos útil talvez?
+    'updatedAt', // Novo
+    'isMirror', // Novo
+    'relatedRequestId', // Novo
+  ])
   .default('createdAt');
+
 const sortOrderValues = z.enum(['asc', 'desc']).default('desc');
 
 // Schema para Query Params de GET /requests (CORRIGIDO)
