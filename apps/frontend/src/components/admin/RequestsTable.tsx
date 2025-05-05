@@ -17,7 +17,6 @@ import { UseMutationResult } from '@tanstack/react-query'; // Tipagem da mutaç�
 import { ArrowDown, ArrowUp, ArrowUpDown, Link2 } from 'lucide-react';
 
 // Importa as novas células
-import { ActionsCell } from './cells/ActionsCell';
 import { ObservationCell } from './cells/ObservationCell';
 import { StatusCell } from './cells/StatusCell';
 
@@ -112,21 +111,11 @@ export function RequestsTable({
               Criado Em {renderSortIcon('createdAt')}
             </Button>
           </TableHead>
-          <TableHead className="w-[60px] text-center">Ações</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {requests.map((req) => (
-          <TableRow
-            key={req.id}
-            className={cn(
-              'hover:bg-muted/50', // Mantém o estilo de hover
-              req.eventType === SwapEventType.SUBSTITUICAO &&
-                'bg-neutral-950/80 dark:bg-neutral-500/5' // Ex: Fundo 'muted' com baixa opacidade
-              // Ajuste 'bg-muted/20 dark:bg-muted/10' para a cor/opacidade que achar melhor.
-              // Poderia ser 'bg-blue-950', 'bg-slate-100 dark:bg-slate-900', etc.
-            )}
-          >
+          <TableRow key={req.id} className={cn('hover:bg-muted/50')}>
             <TableCell className="font-medium">
               <div className="flex items-center">
                 {/* Usa flex para alinhar ícone e texto */}
@@ -210,9 +199,6 @@ export function RequestsTable({
               {formatDate(req.createdAt)}
             </TableCell>
             {/* Célula de Ações usa o componente ActionsCell */}
-            <TableCell>
-              <ActionsCell request={req} />
-            </TableCell>
           </TableRow>
         ))}
       </TableBody>
