@@ -76,7 +76,7 @@ export function DashboardSummaryCards({
         isLoading={isLoading}
         value={summaryData?.byStatus?.REALIZADO}
         icon={CheckCircle}
-        colorClass="text-green-600" // Exemplo de cor
+        colorClass="text-green-700" // Exemplo de cor
       />
 
       {/* Card Não Realizada */}

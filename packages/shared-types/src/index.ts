@@ -348,3 +348,19 @@ export const userUpdateSchema = z
   });
 
 export type UserUpdateInput = z.infer<typeof userUpdateSchema>;
+
+// Tipo para os dados retornados pela API GET /api/requests/summary
+export type RequestSummaryData = {
+  byStatus: {
+    [SwapStatus.AGENDADO]: number;
+    [SwapStatus.REALIZADO]: number;
+    [SwapStatus.NAO_REALIZADA]: number;
+  };
+  byType: {
+    [SwapEventType.TROCA]: number;
+    [SwapEventType.SUBSTITUICAO]: number;
+  };
+  attention: {
+    scheduledPastDue: number;
+  };
+};

@@ -295,10 +295,12 @@ export default function AdminDashboardPage() {
           `Observação da solicitação ${variables.requestId} atualizada!`
         );
       } // Feedback para observação
+
       queryClient.invalidateQueries({ queryKey: ['adminSwapRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['requestSummary'] }); // <-- ADICIONA ESTA LINHA
       if (editingRequest?.id === variables.requestId) {
         setEditingRequest(null);
-      } // Fecha dialog se aberto
+      }
     },
     onError: (error) => {
       toast.error(error.message || 'Erro ao atualizar solicitação.');

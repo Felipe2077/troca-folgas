@@ -3,6 +3,7 @@
 
 // --- Imports ---
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -32,7 +33,7 @@ import {
   SwapRequest,
   swapRequestCreateBodySchema,
 } from '@repo/shared-types'; // <-- ZOD: Importa schema
-import { useMutation } from '@tanstack/react-query'; // <-- ZOD: Garante useQueryClient importado
+import { useMutation, useQueryClient } from '@tanstack/react-query'; // <-- ZOD: Garante useQueryClient importado
 import { FormEvent, useState } from 'react'; // Importa FormEvent e useEffect
 import { toast } from 'sonner';
 import { z } from 'zod'; // <-- ZOD: Importa Zod
@@ -102,6 +103,7 @@ export default function NewRequestPage() {
     useState<FormattedErrors>(null);
 
   // const router = useRouter(); // Removido router se não usado para redirect aqui
+  const queryClient = useQueryClient(); // <-- Adiciona/Garante esta linha
   const { token } = useAuth();
 
   // Mutação para submeter o formulário (mantida)
@@ -124,6 +126,7 @@ export default function NewRequestPage() {
       setEmployeeFunction(undefined);
       setGroupOut(undefined);
       setGroupIn(undefined);
+      queryClient.invalidateQueries({ queryKey: ['requestSummary'] });
       // *** Fim da Limpeza ***
       console.log('>>> [onSuccess] Form state cleared.'); // <-- ADICIONE ESTE LOG
     },
