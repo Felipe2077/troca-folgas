@@ -96,29 +96,31 @@ export async function requestRoutes(fastify: FastifyInstance) {
       }
 
       // Filtro de Data (campo createdAt)
+      // Filtro para swapDate
       if (swapDateStart || swapDateEnd) {
         whereClause.swapDate = {};
         if (swapDateStart) {
           const start = new Date(swapDateStart);
-          start.setHours(0, 0, 0, 0);
+          start.setUTCHours(0, 0, 0, 0); // Início do dia em UTC
           whereClause.swapDate.gte = start;
         }
         if (swapDateEnd) {
           const end = new Date(swapDateEnd);
-          end.setHours(23, 59, 59, 999);
+          end.setUTCHours(23, 59, 59, 999); // Fim do dia em UTC
           whereClause.swapDate.lte = end;
         }
       }
+      // Filtro para paybackDate
       if (paybackDateStart || paybackDateEnd) {
         whereClause.paybackDate = {};
         if (paybackDateStart) {
           const start = new Date(paybackDateStart);
-          start.setHours(0, 0, 0, 0);
+          start.setUTCHours(0, 0, 0, 0); // Início do dia em UTC
           whereClause.paybackDate.gte = start;
         }
         if (paybackDateEnd) {
           const end = new Date(paybackDateEnd);
-          end.setHours(23, 59, 59, 999);
+          end.setUTCHours(23, 59, 59, 999); // Fim do dia em UTC
           whereClause.paybackDate.lte = end;
         }
       }
