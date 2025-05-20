@@ -1,5 +1,5 @@
 // apps/backend/src/routes/settings.routes.ts
-import { Role } from '@prisma/client'; // Import Role
+import { Role } from '@repo/shared-types';
 import { FastifyInstance } from 'fastify';
 import { ZodError } from 'zod';
 import { authenticate } from '../hooks/authenticate.hook.js';
@@ -74,13 +74,13 @@ export async function settingsRoutes(fastify: FastifyInstance) {
           update: {
             // Usa os dados validados (que já são do tipo Enum do shared-types)
             // Prisma aceita a string do Enum diretamente aqui se os nomes baterem
-            submissionStartDay: validatedData.submissionStartDay,
-            submissionEndDay: validatedData.submissionEndDay,
+            submissionStartDay: validatedData!.submissionStartDay,
+            submissionEndDay: validatedData!.submissionEndDay,
           },
           create: {
             id: 1,
-            submissionStartDay: validatedData.submissionStartDay,
-            submissionEndDay: validatedData.submissionEndDay,
+            submissionStartDay: validatedData!.submissionStartDay,
+            submissionEndDay: validatedData!.submissionEndDay,
           },
         });
 

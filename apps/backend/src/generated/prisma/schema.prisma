@@ -1,0 +1,130 @@
+// prisma/schema.prisma 
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+// ----- ENUMS -----
+
+enum Role {
+  ADMINISTRADOR
+  ENCARREGADO
+}
+
+enum EmployeeFunction {
+  MOTORISTA
+  COBRADOR
+}
+
+enum ReliefGroup {
+  G1
+  G2
+  FIXO_DOMINGO
+  SAB_DOMINGO
+  FIXO_SABADO
+}
+
+enum SwapEventType {
+  TROCA
+  SUBSTITUICAO
+}
+
+enum SwapStatus {
+  AGENDADO
+  NAO_REALIZADA
+  REALIZADO
+}
+
+enum DayOfWeek {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+// ----- MODELS -----
+
+model User {
+  id              Int      @id @default(autoincrement())
+  name            String
+  loginIdentifier String   @unique // Validação de formato/tamanho no Zod
+  passwordHash    String
+  role            Role
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  submittedRequests SwapRequest[] @relation("SubmittedBy")
+  auditLogs         AuditLog[]    @relation("PerformedBy") // Relação AuditLog -> User
+
+  @@map("users")
+}
+
+model SwapRequest {
+  id               Int              @id @default(autoincrement())
+  employeeIdOut    String
+  employeeIdIn     String
+  swapDate         DateTime
+  paybackDate      DateTime
+  employeeFunction EmployeeFunction
+  groupOut         ReliefGroup
+  groupIn          ReliefGroup
+  eventType        SwapEventType
+  status           SwapStatus       @default(AGENDADO)
+  observation      String?
+
+  submittedById Int
+  submittedBy   User @relation("SubmittedBy", fields: [submittedById], references: [id])
+
+  isMirror         Boolean @default(false)
+  relatedRequestId Int?    @unique // ID da request original/espelho
+
+  // <--  Relação explícita para espelhamento -->
+  // Define uma relação opcional 1-para-1 consigo mesma
+  originalRequest SwapRequest? @relation("MirrorSwap", fields: [relatedRequestId], references: [id], onDelete: SetNull, onUpdate: Cascade) // Se eu sou um espelho, aponta para o original. Se o original for deletado, relatedRequestId fica null.
+  mirrorRequest   SwapRequest? @relation("MirrorSwap") // Se eu sou original, aponta para o meu espelho.
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("swap_requests")
+}
+
+model AuditLog {
+  id                  Int      @id @default(autoincrement())
+  timestamp           DateTime @default(now())
+  action              String
+  details             String? // Mudado de Json? para String? para simplicidade inicial
+  userId              Int // ID do usuário que realizou a ação (Chave Estrangeira)
+  userLoginIdentifier String // Identificador (Crachá) denormalizado para fácil leitura
+  targetResourceId    Int?
+  targetResourceType  String?
+
+  // Relação explícita com User
+  // Se um usuário for deletado, o que acontece com o log? SetNull torna userId opcional (userId Int?)
+  // NoAction ou Restrict impediriam a deleção do usuário. Vamos manter Restrict (padrão implícito) por enquanto.
+  // Para isso userId NÃO pode ser opcional. Ajustado userId para Int (não Int?)
+  // E a relação em User (auditLogs) também não pode ser opcional (User?).
+  performedBy User @relation("PerformedBy", fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@map("audit_logs")
+}
+
+model Settings {
+  id                 Int       @id @default(1)
+  submissionStartDay DayOfWeek @default(MONDAY)
+  submissionEndDay   DayOfWeek @default(WEDNESDAY)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@map("settings")
+}

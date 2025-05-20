@@ -1,4 +1,4 @@
-// apps/backend/src/lib/audit.ts - VERSÃO CORRETA FINAL (DE NOVO!)
+// apps/backend/src/lib/audit.ts
 import { PrismaClient } from '@prisma/client';
 
 interface LogAuditParams {

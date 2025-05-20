@@ -1,0 +1,9 @@
+    # apps/backend/.dockerignore
+    node_modules
+    dist
+    .env
+    .DS_Store
+    npm-debug.log*
+    *.local
+    .turbo
+    

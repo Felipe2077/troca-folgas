@@ -1,6 +1,7 @@
 // apps/backend/src/routes/users.routes.ts
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'; // Para P2025
-import { Role, userUpdateSchema } from '@repo/shared-types'; // Enum/Tipo Role compartilhado
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { Role, userUpdateSchema } from '@repo/shared-types';
+
 import { FastifyInstance } from 'fastify';
 import { ZodError } from 'zod'; // Import ZodError
 import { authenticate } from '../hooks/authenticate.hook.js'; // Hook de autenticação

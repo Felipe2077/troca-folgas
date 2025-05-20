@@ -4,7 +4,7 @@ import fastifyEnv from '@fastify/env'; // Import @fastify/env
 import jwt from '@fastify/jwt'; // Import @fastify/jwt
 import fastify from 'fastify';
 import { z } from 'zod';
-import { envSchemaJson, zodEnvSchema } from './config/env.validation.js'; // <-- NOVO IMPORT
+import { envSchemaJson, zodEnvSchema } from './config/env.validation.js';
 import { authRoutes } from './routes/auth.routes.js';
 import { requestRoutes } from './routes/request.routes.js';
 import { settingsRoutes } from './routes/settings.routes.js';
@@ -42,6 +42,7 @@ await app.register(cors, {
     const allowedOrigins = [
       'http://localhost:3000',
       'http://10.10.112.205:3000', // pioneira,
+      'http://10.10.100.79:3000', // pioneira,
       'http://192.168.2.115:3000', // casa,
       'http://192.168.2.108:3000', //casawifi
     ];

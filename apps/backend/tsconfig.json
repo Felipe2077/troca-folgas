@@ -1,13 +1,35 @@
 {
   "compilerOptions": {
-    // Suas outras opções como module: "NodeNext", moduleResolution: "NodeNext", etc.
-    "baseUrl": ".", // Necessário para 'paths'
-    "paths": {
-      "@prisma/client": ["./node_modules/.prisma/client"] // Mapeia o alias para o local gerado
-    },
+    // --- Configuração de Módulo e Resolução para Node.js ESM ---
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022", // Alvo moderno que suporta features usadas
+    "esModuleInterop": true, // Para melhor compatibilidade com CJS
+    "allowSyntheticDefaultImports": true, // Comum para interop
+    "resolveJsonModule": true, // Se você importar arquivos .json
+
+    // --- Qualidade e Segurança de Código ---
+    "strict": true, // Habilita todas as checagens estritas do TypeScript
+    "skipLibCheck": true, // Pula checagem de tipos em arquivos .d.ts de bibliotecas
+    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": true, // Ajuda a pegar variáveis não usadas
+    "noUnusedParameters": true, // Ajuda a pegar parâmetros não usados
+
+    // --- Saída do Build (para quando rodar 'tsc' via 'pnpm build') ---
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "sourceMap": true, // Gera source maps para debug
+    "declaration": false, // Não precisamos de .d.ts para a aplicação final (a menos que fosse uma lib)
+
+    // --- Outras Opções ---
+    "isolatedModules": true // Boa prática para transpilação de arquivo único
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src/**/*" // Quais arquivos TS compilar/checar
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/test-prisma-import.ts" // Exclui o arquivo de teste do build
+  ]
 }

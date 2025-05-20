@@ -1,10 +1,12 @@
 // apps/backend/src/routes/request.routes.ts
-import { DayOfWeek, Prisma, SwapEventType } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import {
+  DayOfWeek,
   requestListQuerySchema,
   Role,
+  SwapEventType,
   swapRequestUpdateSchema,
   SwapStatus,
 } from '@repo/shared-types'; // Importa o novo schema e SwapStatus

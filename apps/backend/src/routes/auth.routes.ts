@@ -1,6 +1,7 @@
 // apps/backend/src/routes/auth.routes.ts
-import { Prisma, Role } from '@prisma/client';
-import { loginBodySchema, registerBodySchema } from '@repo/shared-types';
+import { Prisma } from '@prisma/client';
+import { loginBodySchema, registerBodySchema, Role } from '@repo/shared-types';
+
 import { FastifyInstance } from 'fastify';
 import { authenticate } from '../hooks/authenticate.hook.js'; // Importa o hook compartilhado
 import { logAudit } from '../lib/audit.js'; // <-- Caminho relativo e extensão .js

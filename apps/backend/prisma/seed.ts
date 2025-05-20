@@ -18,11 +18,11 @@ async function main() {
 
   // Cria Usuário Administrador Padrão
   try {
-    const adminPasswordHash = await hash('senhaforte123', 8);
+    const adminPasswordHash = await hash('W4a3ay_cruy', 8);
     const admin = await prisma.user.create({
       data: {
         name: 'Admin Sistema',
-        loginIdentifier: '99999',
+        loginIdentifier: '24050',
         passwordHash: adminPasswordHash,
         role: Role.ADMINISTRADOR,
         isActive: true,
@@ -39,7 +39,7 @@ async function main() {
   // Cria Usuário Encarregado Padrão
   let encargado; // Declara fora para ter escopo
   try {
-    const encargadoPasswordHash = await hash('password123', 8);
+    const encargadoPasswordHash = await hash('W4a3ay_cruy', 8);
     encargado = await prisma.user.create({
       // Atribui à variável externa
       data: {
