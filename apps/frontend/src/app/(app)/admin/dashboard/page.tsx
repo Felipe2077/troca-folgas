@@ -1,8 +1,6 @@
 // apps/frontend/src/app/(app)/admin/dashboard/page.tsx - COMPLETO COM FILTROS
 'use client';
-
-// --- Imports ---
-import { DashboardFilters } from '@/components/admin/DashboardFilters'; // <-- Componente de Filtros
+import { DashboardFilters } from '@/components/admin/DashboardFilters'; // <--
 import { DashboardSummaryCards } from '@/components/admin/DashboardSummaryCards';
 import { ObservationDialog } from '@/components/admin/ObservationDialog';
 import { RequestsTable } from '@/components/admin/RequestsTable'; // <-- Componente da Tabela
@@ -20,6 +18,7 @@ import {
   ReliefGroup,
   RequestSummaryData,
   Role,
+  SortableSwapRequestColumn,
   SwapEventType,
   SwapRequest,
   SwapStatus,
@@ -30,8 +29,6 @@ import { useState } from 'react';
 import { DateRange } from 'react-day-picker';
 import { toast } from 'sonner';
 
-// --- Tipos Específicos ---
-type SortableColumn = 'createdAt' | 'swapDate' | 'paybackDate' | 'id';
 interface SwapRequestUpdateData {
   status?: SwapStatus;
   observation?: string | null;
@@ -48,7 +45,7 @@ async function fetchSwapRequests(
   statusFilter: SwapStatus | 'ALL',
   swapDateRange: DateRange | undefined, // <-- Mudou aqui
   paybackDateRange: DateRange | undefined, // <-- Adicionado aqui
-  sortBy: SortableColumn,
+  sortBy: SortableSwapRequestColumn,
   sortOrder: 'asc' | 'desc',
   employeeIdOut: string,
   employeeIdIn: string,
@@ -163,10 +160,9 @@ async function updateRequestApi({
 // --- Componente Principal ---
 export default function AdminDashboardPage() {
   const queryClient = useQueryClient();
-  const { token, user: loggedInUser } = useAuth();
+  const { token } = useAuth();
   // Estados para Filtros
   const [statusFilter, setStatusFilter] = useState<SwapStatus | 'ALL'>('ALL');
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [swapDateRange, setSwapDateRange] = useState<DateRange | undefined>(
     undefined
   );
@@ -218,7 +214,8 @@ export default function AdminDashboardPage() {
   );
 
   // Estados para Ordenação
-  const [sortColumn, setSortColumn] = useState<SortableColumn>('createdAt');
+  const [sortColumn, setSortColumn] =
+    useState<SortableSwapRequestColumn>('createdAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // Estado para Dialog de Observação
@@ -269,9 +266,6 @@ export default function AdminDashboardPage() {
       ),
     enabled: !!token,
     refetchOnWindowFocus: false,
-    onError: (err) => {
-      console.error('Erro ao buscar dados da dashboard:', err);
-    },
   });
 
   // Mutação para Atualizar Status/Observação (mantida)
@@ -284,7 +278,7 @@ export default function AdminDashboardPage() {
       if (!token) throw new Error('Token não encontrado');
       return updateRequestApi({ requestId, data, token });
     },
-    onSuccess: (updatedRequest, variables) => {
+    onSuccess: (_updatedRequest, variables) => {
       if (variables.data.status) {
         toast.success(
           `Status da solicitação ${variables.requestId} atualizado!`
@@ -318,7 +312,7 @@ export default function AdminDashboardPage() {
   };
 
   // Handler para Ordenação (mantido)
-  const handleSort = (column: SortableColumn) => {
+  const handleSort = (column: SortableSwapRequestColumn) => {
     if (sortColumn === column) {
       setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
     } else {

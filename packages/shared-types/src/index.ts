@@ -382,3 +382,28 @@ export type RequestSummaryData = {
     scheduledPastDue: number;
   };
 };
+
+// Schema para Query Params de GET /requests (já deve existir e estar atualizado)
+const sortableColumnsValues = [
+  // Array com os valores exatos do z.enum
+  'createdAt',
+  'swapDate',
+  'paybackDate',
+  'id',
+  'employeeIdOut',
+  'employeeIdIn',
+  'employeeFunction',
+  'groupOut',
+  'groupIn',
+  'eventType',
+  'status',
+  'updatedAt',
+] as const; // Garante que são literais
+
+// *** ADICIONE E EXPORTE ESTE TIPO ***
+export type SortableSwapRequestColumn = (typeof sortableColumnsValues)[number];
+// Ou, se preferir uma união explícita:
+// export type SortableSwapRequestColumn =
+//   | 'createdAt' | 'swapDate' | 'paybackDate' | 'id'
+//   | 'employeeIdOut' | 'employeeIdIn' | 'employeeFunction'
+//   | 'groupOut' | 'groupIn' | 'eventType' | 'status' | 'updatedAt';

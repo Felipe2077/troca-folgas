@@ -12,7 +12,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { cn, formatDate } from '@/lib/utils';
-import { SwapEventType, SwapRequest, SwapStatus } from '@repo/shared-types'; // Importa tipos necessários
+import {
+  SortableSwapRequestColumn,
+  SwapEventType,
+  SwapRequest,
+  SwapStatus,
+} from '@repo/shared-types'; // Importa tipos necessários
 import { UseMutationResult } from '@tanstack/react-query'; // Tipagem da mutação
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 
@@ -21,19 +26,8 @@ import { ObservationCell } from './cells/ObservationCell';
 import { StatusCell } from './cells/StatusCell';
 
 // Tipo para a coluna de ordenação (definido na página também)
-type SortableColumn =
-  | 'createdAt'
-  | 'swapDate'
-  | 'paybackDate'
-  | 'id'
-  | 'employeeIdOut'
-  | 'employeeIdIn'
-  | 'employeeFunction'
-  | 'groupOut'
-  | 'groupIn'
-  | 'eventType'
-  | 'status'
-  | 'updatedAt';
+
+type SortableColumn = SortableSwapRequestColumn;
 
 // Tipo para dados de atualização (definido na página também)
 interface SwapRequestUpdateData {

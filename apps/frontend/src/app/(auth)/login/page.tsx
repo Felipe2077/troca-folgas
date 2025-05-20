@@ -19,7 +19,7 @@ import { Loader2 } from 'lucide-react';
 import { Mukta } from 'next/font/google';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useEffect, useState } from 'react'; // Import React e FormEvent
+import { FormEvent, useState } from 'react'; // Import React e FormEvent
 import { toast } from 'sonner';
 import { z } from 'zod'; // Importa Zod
 
@@ -33,43 +33,6 @@ const mukta = Mukta({
   subsets: ['latin'],
   display: 'swap',
 });
-
-const GlowCard = () => {
-  useEffect(() => {
-    const style = document.createElement('style');
-    style.textContent = `
-     @media (min-width: 768px) {
-      @keyframes pulseShadow {
-        0%, 100% {
-          box-shadow:
-         0 0 30px rgba(255, 217, 0, 0.29),
-         0 0 20px rgba(255, 234, 0, 0.19),
-         0 0 12px rgba(255, 123, 0, 0.19),
-         0 0 7px rgba(156, 128, 5, 0.3);
-        }
-        50% {
-          box-shadow:
-        0 0 50px rgba(255, 217, 0, 0.55),
-        0 0 45px rgba(255, 234, 0, 0.35),
-        0 0 25px rgba(255, 123, 0, 0.45),
-        0 0 19px rgba(156, 128, 5, 0.6);
-        }
-      }
-
-      .glow {
-        animation: pulseShadow 5s infinite ease-in-out;
-      }
-  }
-    `;
-    document.head.appendChild(style);
-
-    return () => {
-      document.head.removeChild(style); // limpo o estilo quando desmontar
-    };
-  }, []);
-
-  return <div className="glow"></div>;
-};
 
 export default function LoginPage() {
   const [loginIdentifier, setLoginIdentifier] = useState('');
@@ -112,7 +75,7 @@ export default function LoginPage() {
       } else {
         router.push('/');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Falha no login (componente):', err);
       const errorMessage = err.message || 'Erro desconhecido.';
       setApiError(errorMessage); // Guarda erro da API

@@ -10,15 +10,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { SwapRequest } from '@repo/shared-types';
 import { MoreHorizontal } from 'lucide-react';
 
-interface ActionsCellProps {
-  request: SwapRequest;
-  // Adicionar outras props de callback para ações futuras (ex: onDelete)
-}
-
-export function ActionsCell({ request }: ActionsCellProps) {
+export function ActionsCell() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
