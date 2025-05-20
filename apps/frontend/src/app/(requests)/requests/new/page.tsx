@@ -239,6 +239,7 @@ export default function NewRequestPage() {
                     type="tel"
                     inputMode="numeric"
                     pattern="[0-9]*"
+                    maxLength={6}
                     onChange={(e) => {
                       setEmployeeIdOut(e.target.value.replace(/[^0-9]/g, ''));
                       setValidationErrors(null);
@@ -337,6 +338,7 @@ export default function NewRequestPage() {
                     type="tel"
                     inputMode="numeric"
                     pattern="[0-9]*"
+                    maxLength={6}
                     onChange={(e) => {
                       setEmployeeIdIn(e.target.value.replace(/[^0-9]/g, ''));
                       setValidationErrors(null);

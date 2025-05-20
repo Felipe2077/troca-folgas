@@ -1,10 +1,13 @@
-// apps/backend/tsconfig.json
 {
-  "extends": "@tsconfig/node20/tsconfig.json",
   "compilerOptions": {
-    "outDir": "./dist", // Onde o código compilado (JS) será salvo
-    "rootDir": "./src" // Onde está o código fonte (TS)
+    // Suas outras opções como module: "NodeNext", moduleResolution: "NodeNext", etc.
+    "baseUrl": ".", // Necessário para 'paths'
+    "paths": {
+      "@prisma/client": ["./node_modules/.prisma/client"] // Mapeia o alias para o local gerado
+    },
+    "outDir": "./dist",
+    "rootDir": "./src"
   },
-  "include": ["src/**/*"], // Quais arquivos incluir na compilação
-  "exclude": ["node_modules", "dist"] // O que excluir
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

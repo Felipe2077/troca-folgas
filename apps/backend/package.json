@@ -36,11 +36,12 @@
   "devDependencies": {
     "@tsconfig/node20": "^20.1.5",
     "@types/bcryptjs": "^3.0.0",
-    "@types/node": "^20",
+    "@types/node": "^20.17.32",
     "dotenv-cli": "^8.0.0",
     "nodemon": "^3.1.9",
     "prisma": "^6.6.0",
     "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
     "typescript": "^5"
   }
 }
