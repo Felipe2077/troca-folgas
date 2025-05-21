@@ -1,10 +1,10 @@
 // apps/backend/src/routes/auth.routes.ts
-import { Prisma } from '@prisma/client';
 import { loginBodySchema, registerBodySchema, Role } from '@repo/shared-types';
+import { Prisma } from '../generated/prisma/index.js';
 
 import { FastifyInstance } from 'fastify';
 import { authenticate } from '../hooks/authenticate.hook.js'; // Importa o hook compartilhado
-import { logAudit } from '../lib/audit.js'; // <-- Caminho relativo e extensão .js
+import { logAudit } from '../lib/audit.js';
 import { comparePassword, hashPassword } from '../lib/hash.js'; // Importa comparePassword
 import { prisma } from '../lib/prisma.js'; // Importa prisma
 

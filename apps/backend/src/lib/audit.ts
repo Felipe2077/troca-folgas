@@ -1,5 +1,5 @@
 // apps/backend/src/lib/audit.ts
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../generated/prisma/index.js';
 
 interface LogAuditParams {
   prisma: PrismaClient;

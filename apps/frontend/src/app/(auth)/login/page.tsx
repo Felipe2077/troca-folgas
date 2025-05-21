@@ -76,9 +76,17 @@ export default function LoginPage() {
         router.push('/');
       }
     } catch (err: unknown) {
+      // err é unknown
       console.error('Falha no login (componente):', err);
-      const errorMessage = err.message || 'Erro desconhecido.';
-      setApiError(errorMessage); // Guarda erro da API
+      let errorMessage = 'Erro desconhecido ao tentar fazer login.'; // Default message
+
+      // Verifica se err é uma instância de Error antes de acessar .message
+      if (err instanceof Error) {
+        errorMessage = err.message; // Se for Error, usa sua mensagem
+      }
+      // Se não for Error, mantém a mensagem default ou pode logar/tratar diferente
+
+      setApiError(errorMessage);
       toast.error(errorMessage);
     }
   };

@@ -1,7 +1,7 @@
 // apps/backend/src/schemas/request.schema.ts
 import { z } from 'zod';
 // Importa os Enums definidos no schema.prisma
-import { EmployeeFunction, ReliefGroup, SwapStatus } from '@prisma/client';
+import { EmployeeFunction, ReliefGroup, SwapStatus } from '@repo/shared-types';
 
 // Schema para validar o corpo da requisição ao criar uma SwapRequest
 export const swapRequestCreateBodySchema = z.object({

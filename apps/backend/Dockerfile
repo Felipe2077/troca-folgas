@@ -1,79 +1,71 @@
-# Dockerfile para apps/backend
+# apps/backend/Dockerfile (para cliente Prisma pré-gerado localmente)
 
-    # ---- Base Stage ----
-    # Usa uma imagem Node.js oficial como base. Escolha uma versão LTS.
-    # Usar 'alpine' para imagens menores, mas pode ter menos ferramentas. 'slim' é um bom meio-termo.
-    FROM node:20-slim AS base
-    LABEL authors="Felipe"
+# Stage 1: Builder - Prepara dependências e builda o código TS
+# Usar node:20 (full) para ter um ambiente de build mais robusto
+FROM node:20 AS builder
+WORKDIR /app
 
-    # Define o diretório de trabalho dentro do container
-    WORKDIR /usr/src/app
+# Copia arquivos de manifesto de workspace e o package.json da raiz
+COPY pnpm-lock.yaml ./
+COPY pnpm-workspace.yaml ./
+COPY package.json ./
 
-    # Instala pnpm globalmente na imagem base
-    RUN npm install -g pnpm
+# Copia os package.json e o código fonte de TODOS os pacotes e apps
+# Isso inclui apps/backend/src/generated/prisma (gerado localmente)
+# e também node_modules/@prisma/engines (que conterá o motor Linux baixado localmente)
+COPY apps ./apps
+COPY packages ./packages
+# COPY tsconfig.json ./tsconfig.base.json # Se o tsconfig do backend estender um da raiz
 
-    # ---- Dependencies Stage ----
-    # Este estágio foca em instalar dependências e pode ser cacheado se os lockfiles não mudarem.
-    FROM base AS dependencies
-    WORKDIR /usr/src/app
+RUN npm install -g pnpm
+# Instala todas as dependências, incluindo devDependencies para o build
+RUN pnpm install --frozen-lockfile
 
-    # Copia os arquivos de manifesto de pacotes da RAIZ do monorepo e do backend
-    # Isso é crucial para o pnpm workspaces funcionar corretamente
-    COPY ../../pnpm-lock.yaml ./
-    COPY ../../pnpm-workspace.yaml ./
-    COPY package.json ./
-    COPY ../../package.json ./package.json.root 
+# Builda o pacote shared-types primeiro
+RUN pnpm --filter @repo/shared-types run build
 
-    # Instala APENAS as dependências de produção para o pacote 'backend'
-    # O filtro '--prod' garante que devDependencies não sejam instaladas
-    # O filtro '--filter backend' garante que só as dependências do backend (e suas deps compartilhadas) sejam instaladas
-    RUN pnpm install --prod --filter backend
+# Builda APENAS o pacote backend (executa 'tsc')
+# NÃO rodamos 'prisma generate' aqui.
+RUN pnpm --filter backend run build
 
-    # ---- Build Stage ----
-    # Este estágio foca em buildar o código TypeScript para JavaScript.
-    FROM base AS build
-    WORKDIR /usr/src/app
+# Stage 2: Produção - Cria a imagem final leve
+# Usar node:20 (full) também para produção para garantir compatibilidade com o motor Prisma
+FROM node:20 AS production
+WORKDIR /app
+ENV NODE_ENV production
 
-    # Copia as dependências já instaladas do estágio anterior
-    COPY --from=dependencies /usr/src/app/node_modules ./node_modules
-    COPY --from=dependencies /usr/src/app/package.json ./package.json
+# Copia o package.json do backend
+COPY --from=builder /app/apps/backend/package.json ./package.json
 
-    # Copia o restante do código fonte do backend e arquivos de configuração
-    COPY . .
-    # Copia o schema Prisma para dentro do contexto de build
-    COPY prisma ./prisma
+# Copia arquivos de lock e workspace para instalar dependências de produção
+COPY --from=builder /app/pnpm-lock.yaml ./
+COPY --from=builder /app/pnpm-workspace.yaml ./
+COPY --from=builder /app/packages/shared-types/package.json ./packages/shared-types/package.json
+COPY --from=builder /app/packages/shared-types/dist ./packages/shared-types/dist
 
-    # Gera o Prisma Client (essencial para o build e runtime)
-    # Assume que DATABASE_URL não é necessária para 'generate', apenas para 'migrate' ou 'db push'
-    # Se 'generate' precisar do .env, precisaria copiar o .env de produção aqui ou passar como build arg
-    RUN pnpm exec prisma generate
+# Instala SOMENTE as dependências de PRODUÇÃO
+RUN npm install -g pnpm
+RUN pnpm install --prod
 
-    # Compila o código TypeScript para JavaScript
-    # O tsconfig.json deve ter "outDir": "./dist"
-    RUN pnpm build
+# Copia o código JavaScript buildado (pasta dist) do backend
+COPY --from=builder /app/apps/backend/dist ./dist
+# Copia a pasta prisma (contendo o schema)
+COPY --from=builder /app/apps/backend/prisma ./prisma
 
-    # ---- Production Stage ----
-    # Este é o estágio final, que cria a imagem de produção leve.
-    FROM base AS production
-    WORKDIR /usr/src/app
+# Copia o Prisma Client PRÉ-GERADO (do seu ambiente local, via estágio builder)
+# para o local onde o backend espera encontrá-lo (src/generated/prisma)
+COPY --from=builder /app/apps/backend/src/generated/prisma ./dist/generated/prisma
 
-    # Copia as dependências de produção do estágio 'dependencies'
-    COPY --from=dependencies /usr/src/app/node_modules ./node_modules
-    COPY --from=dependencies /usr/src/app/package.json ./package.json
+# Copia o MOTOR LINUX específico do Prisma que foi baixado/preparado
+# pelo 'prisma generate' local (com o binaryTarget correto) e copiado para o builder.
+# O Prisma Client (em src/generated/prisma) procurará por este motor.
+# O caminho exato do motor no builder pode ser /app/node_modules/@prisma/engines/ ou
+# /app/apps/backend/node_modules/.prisma/client/runtime/
+# Vamos copiar de um local comum onde o 'prisma generate' com binaryTargets os coloca.
+# Este é o motor para Debian com OpenSSL 1.1.x.
+COPY --from=builder /app/apps/backend/node_modules/.prisma/client/libquery_engine-debian-openssl-1.1.x.so.node ./node_modules/.prisma/client/
+# Ou, se estiver em @prisma/engines na raiz do node_modules do builder:
+# COPY --from=builder /app/node_modules/@prisma/engines/libquery_engine-debian-openssl-3.0.x.so.node ./node_modules/@prisma/engines/
 
-    # Copia o código JavaScript buildado do estágio 'build'
-    COPY --from=build /usr/src/app/dist ./dist
-    # Copia o schema Prisma (necessário em runtime se o Prisma Client o lê)
-    COPY --from=build /usr/src/app/prisma ./prisma
-    # Copia o Prisma Client gerado para o local correto em node_modules
-    # Este caminho deve corresponder ao 'output' no schema.prisma ou ao padrão do Prisma
-    COPY --from=build /usr/src/app/node_modules/.prisma/client ./node_modules/.prisma/client
-    COPY --from=build /usr/src/app/node_modules/@prisma/client ./node_modules/@prisma/client
-
-    # Expõe a porta que a API vai usar (deve bater com BACKEND_PORT no .env)
-    EXPOSE 3333
-
-    # Comando para iniciar a aplicação em produção
-    # Assume que o script 'start' no package.json do backend é 'node dist/server.js'
-    CMD [ "pnpm", "start" ]
-    
+EXPOSE 3333
+CMD [ "node", "dist/server.js" ]

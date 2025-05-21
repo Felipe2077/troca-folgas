@@ -1,5 +1,5 @@
 // apps/backend/src/routes/request.routes.ts
-import { Prisma } from '@prisma/client';
+import { Prisma } from '../generated/prisma/index.js';
 
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import {

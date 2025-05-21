@@ -1,5 +1,5 @@
 // apps/backend/src/schemas/auth.schema.ts
-import { Role } from '@prisma/client'; // Importa o Enum Role
+import { Role } from '@repo/shared-types';
 import { z } from 'zod';
 
 // Exporta o schema Zod para validar o corpo da requisição de login

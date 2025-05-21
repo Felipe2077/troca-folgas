@@ -6,7 +6,7 @@ import { SwapRequest } from '@repo/shared-types';
 
 interface ObservationCellProps {
   request: SwapRequest;
-  // Não precisa mais de onEdit aqui, nem de className se o estilo for sempre o mesmo
+  className?: string; // <-- ADICIONA className opcional
 }
 
 export function ObservationCell({ request }: ObservationCellProps) {

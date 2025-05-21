@@ -11,6 +11,8 @@ async function main() {
   // Ordem: primeiro SwapRequest, depois Settings, depois User
   await prisma.swapRequest.deleteMany();
   console.log('Deleted existing swap requests.');
+  await prisma.auditLog.deleteMany();
+  console.log('Deleted existing audit logs.');
   await prisma.settings.deleteMany();
   console.log('Deleted existing settings.');
   await prisma.user.deleteMany();

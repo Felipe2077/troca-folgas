@@ -151,7 +151,7 @@ export function EditUserDialog({ user, onOpenChange }: EditUserDialogProps) {
       validationResult.data.role !== loggedInUser.role
     ) {
       toast.error('Você não pode alterar sua própria role.');
-      setFormError('Você não pode alterar sua própria role.'); // Usa formError aqui? Ou só toast?
+      setApiError('Você não pode alterar sua própria role.'); // Usa formError aqui? Ou só toast?
       return;
     }
 

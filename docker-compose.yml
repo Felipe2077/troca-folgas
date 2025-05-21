@@ -12,8 +12,6 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-passdev}
       POSTGRES_DB: ${POSTGRES_DB:-trocasdb}
     ports:
-      # Mapeia a porta 5432 do container para a porta do host definida em .env ou 5432
-      # Ex: Se POSTGRES_PORT=5433 no .env da raiz, será 5433:5432
       - '${POSTGRES_PORT:-5432}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -30,69 +28,42 @@ services:
   # --- Serviço da API Backend (Fastify) ---
   backend:
     build:
-      context: ./apps/backend # Caminho para o diretório do Dockerfile do backend
-      dockerfile: Dockerfile # Nome do Dockerfile
+      context: . # <-- RAIZ DO MONOREPO
+      dockerfile: ./apps/backend/Dockerfile # <-- CAMINHO COMPLETO PARA O DOCKERFILE
     container_name: sistema-trocas-backend
     restart: unless-stopped
-    # Carrega variáveis de ambiente do arquivo .env DENTRO da pasta apps/backend
-    # Este arquivo .env DEVE conter DATABASE_URL apontando para o serviço 'db'
-    # Ex: DATABASE_URL="postgresql://userdev:passdev@db:5432/trocasdb?schema=public"
     env_file:
       - ./apps/backend/.env
     ports:
-      # Mapeia a porta interna do container (definida por PORT ou BACKEND_PORT no .env do backend)
-      # para a porta do host definida por BACKEND_HOST_PORT no .env da raiz (ou 3333)
       - '${BACKEND_HOST_PORT:-3333}:${BACKEND_PORT:-3333}'
     depends_on:
       db:
-        condition: service_healthy # Só inicia depois que o 'db' estiver saudável
+        condition: service_healthy
     environment:
-      # Garante que o Node rode em produção dentro do container
       NODE_ENV: production
-      # A porta que a aplicação Fastify DENTRO do container vai escutar
-      # Deve ser a mesma que o Dockerfile EXPOSE e que o package.json start script usa.
       PORT: ${BACKEND_PORT:-3333}
-      # DATABASE_URL é carregada pelo env_file acima.
-      # JWT_SECRET é carregado pelo env_file acima.
-    volumes:
-      # Para produção, geralmente não mapeamos volumes de código.
-      # A imagem já contém o código buildado.
-      # Se precisar de logs persistentes do backend:
-      # - ./logs/backend:/usr/src/app/logs # Exemplo
-      pass: # Placeholder para a seção de volumes não ficar vazia
+    # volumes: # Removido ou comentado se não houver mapeamentos
+    # pass:
 
   # --- Serviço do Frontend (Next.js) ---
   frontend:
     build:
-      context: ./apps/frontend # Caminho para o diretório do Dockerfile do frontend
-      dockerfile: Dockerfile # Nome do Dockerfile
-      # args: # Se precisar passar build-time args para o Next.js
-      #   NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL_FOR_BROWSER}
+      context: . # <-- RAIZ DO MONOREPO
+      dockerfile: ./apps/frontend/Dockerfile # <-- CAMINHO COMPLETO PARA O DOCKERFILE
     container_name: sistema-trocas-frontend
     restart: unless-stopped
     ports:
-      # Mapeia a porta interna do container (3000) para a porta do host
-      # definida por FRONTEND_HOST_PORT no .env da raiz (ou 3000)
       - '${FRONTEND_HOST_PORT:-3000}:3000'
     depends_on:
-      - backend # Opcional: o frontend pode iniciar, mas chamadas API falharão até backend estar pronto
+      - backend
     environment:
-      # Variável para o Next.js DENTRO DO CONTAINER saber onde está a API
-      # Usa o nome do serviço 'backend' e a porta INTERNA dele na rede Docker.
       NEXT_PUBLIC_API_URL: http://backend:${BACKEND_PORT:-3333}
-      # Garante que o Next.js rode em produção dentro do container
       NODE_ENV: production
-      # A porta que o servidor Next.js DENTRO do container vai escutar
       PORT: 3000
-    # volumes:
-    # Para produção, geralmente não mapeamos volumes de código.
-    # - ./logs/frontend:/usr/src/app/logs # Exemplo para logs
+    # volumes: # Removido ou comentado se não houver mapeamentos
 
-# Define o volume nomeado que será gerenciado pelo Docker
 volumes:
   postgres_data:
-# Opcional: Define uma rede customizada se os serviços precisarem se comunicar
-# e você quiser um nome específico para a rede. Por padrão, o Compose cria uma.
 # networks:
 #   app_network:
 #     driver: bridge

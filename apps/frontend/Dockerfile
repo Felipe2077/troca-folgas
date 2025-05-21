@@ -1,85 +1,55 @@
-    # Dockerfile para apps/frontend
+# apps/frontend/Dockerfile
 
-    # ---- Base Stage ----
-    # Imagem Node.js LTS. 'alpine' é bem pequena.
-    FROM node:20-alpine AS base
-    LABEL authors="Felipe & Gemini"
+# Stage 1: Build
+FROM node:20-alpine AS builder
+WORKDIR /app
 
-    # Define o diretório de trabalho
-    WORKDIR /usr/src/app
+# Copia arquivos de manifesto de workspace e o package.json da raiz
+COPY pnpm-lock.yaml ./
+COPY pnpm-workspace.yaml ./
+COPY package.json ./
 
-    # Instala pnpm globalmente
-    RUN npm install -g pnpm
+# Copia os package.json e o código fonte de TODOS os pacotes e apps
+COPY apps ./apps
+COPY packages ./packages
+# REMOVIDO: Cópia de configs da raiz (postcss, tailwind, tsconfig.base)
+# O build do Next.js usará os configs dentro de apps/frontend/
 
-    # ---- Dependencies Stage ----
-    # Focado em instalar dependências, aproveitando cache do Docker.
-    FROM base AS dependencies
-    WORKDIR /usr/src/app
+# Instala o pnpm globalmente
+RUN npm install -g pnpm
 
-    # Copia arquivos de manifesto da RAIZ e do frontend
-    COPY ../../pnpm-lock.yaml ./
-    COPY ../../pnpm-workspace.yaml ./
-    COPY package.json ./
-    COPY ../../package.json ./package.json.root
+# Instala TODAS as dependências do workspace (incluindo devDependencies para o build do Next.js)
+RUN pnpm install --frozen-lockfile
 
-    # Instala APENAS dependências de produção para o pacote 'frontend'
-    # O Next.js precisa de algumas devDependencies (como 'typescript') no build,
-    # mas para a imagem final, só as de produção.
-    # Vamos instalar todas aqui e depois copiar seletivamente.
-    # Ou, se o build do Next.js não precisar de devDependencies, use --prod.
-    # Por segurança e para garantir que o build funcione, vamos instalar todas por enquanto
-    # e otimizar depois se necessário.
-    RUN pnpm install --filter frontend
-    # Para uma imagem de produção menor, idealmente seria:
-    # RUN pnpm install --prod --filter frontend
-    # Mas o build do Next.js pode precisar de devDependencies.
+# Builda o pacote shared-types primeiro, pois o frontend depende dele
+RUN pnpm --filter @repo/shared-types run build
 
-    # ---- Build Stage ----
-    # Compila a aplicação Next.js.
-    FROM base AS build
-    WORKDIR /usr/src/app
+# Builda o frontend (executa 'next build')
+RUN pnpm --filter frontend run build
 
-    # Copia dependências já instaladas
-    COPY --from=dependencies /usr/src/app/node_modules ./node_modules
-    COPY --from=dependencies /usr/src/app/package.json ./package.json
+# Stage 2: Produção
+FROM node:20-alpine AS production
+WORKDIR /app
+ENV NODE_ENV production
 
-    # Copia o restante do código fonte do frontend
-    # Inclui .next/standalone se gerado localmente, mas o build aqui vai gerar.
-    COPY . .
+# Copia o package.json do frontend para a raiz do WORKDIR
+COPY --from=builder /app/apps/frontend/package.json ./package.json
 
-    # Variáveis de ambiente de BUILD TIME (se necessárias para o build)
-    # Ex: NEXT_PUBLIC_API_URL pode ser necessário se usado durante o build
-    # ARG NEXT_PUBLIC_API_URL
-    # ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+# Copia o pnpm-lock.yaml e pnpm-workspace.yaml para instalar dependências de produção
+COPY --from=builder /app/pnpm-lock.yaml ./
+COPY --from=builder /app/pnpm-workspace.yaml ./
+# Copia os package.json dos pacotes do workspace
+COPY --from=builder /app/packages/shared-types/package.json ./packages/shared-types/package.json
+# Copia o código buildado do shared-types
+COPY --from=builder /app/packages/shared-types/dist ./packages/shared-types/dist
 
-    # Executa o build do Next.js
-    # Isso gera a pasta .next otimizada para produção
-    RUN pnpm build
+# Instala SOMENTE as dependências de PRODUÇÃO para o frontend
+RUN npm install -g pnpm
+RUN pnpm install --prod
 
-    # ---- Production Stage ----
-    # Cria a imagem final, leve, apenas com o necessário para rodar.
-    FROM base AS production
-    WORKDIR /usr/src/app
+# Copia os artefatos de build do Next.js (.next e public)
+COPY --from=builder /app/apps/frontend/.next ./.next
+COPY --from=builder /app/apps/frontend/public ./public
 
-    # Define o ambiente para produção (importante para Next.js)
-    ENV NODE_ENV=production
-
-    # Copia o package.json e as dependências de produção do estágio 'dependencies'
-    # Isso é feito para que o 'pnpm start' funcione corretamente.
-    COPY --from=dependencies /usr/src/app/package.json ./package.json
-    COPY --from=dependencies /usr/src/app/node_modules ./node_modules
-
-    # Copia a pasta .next buildada do estágio 'build'
-    # Esta pasta contém a aplicação otimizada.
-    COPY --from=build /usr/src/app/.next ./.next
-
-    # Copia a pasta 'public' (contém imagens, fontes, etc.)
-    COPY --from=build /usr/src/app/public ./public
-
-    # Expõe a porta que o Next.js usa por padrão (3000)
-    EXPOSE 3000
-
-    # Comando para iniciar o servidor Next.js em modo de produção
-    # O script 'start' no package.json do frontend deve ser 'next start'
-    CMD [ "pnpm", "start" ]
-    
+EXPOSE 3000
+CMD [ "pnpm", "start" ]
