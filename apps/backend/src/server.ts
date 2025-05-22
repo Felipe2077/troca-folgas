@@ -40,7 +40,10 @@ await app.register(cors, {
     console.log(`[CORS] Received Origin: ${origin}`);
     // Permite localhost:3000, o IP específico da sua rede local na porta 3000, ou nenhuma origem (requests do mesmo servidor, curl, etc)
     const allowedOrigins = [
+      'http://escala.vpioneira.com.br:3000',
       'http://localhost:3000',
+      'http://0.0.0.0:3000',
+      'http://127.0.0.1:3000',
       'http://10.10.112.205:3000', // pioneira,
       'http://10.10.100.79:3000', // pioneira,
       'http://192.168.2.115:3000', // casa,

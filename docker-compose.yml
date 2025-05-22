@@ -50,6 +50,13 @@ services:
     build:
       context: . # <-- RAIZ DO MONOREPO
       dockerfile: ./apps/frontend/Dockerfile # <-- CAMINHO COMPLETO PARA O DOCKERFILE
+      args:
+        # Passa a variável para o Dockerfile do frontend durante o build.
+        # O valor aqui deve ser a URL PÚBLICA da sua API no servidor Linux.
+        NEXT_PUBLIC_API_URL: http://10.10.100.79:3333 # Ou use uma variável do .env da raiz
+        # Exemplo usando variável do .env da raiz:
+        # NEXT_PUBLIC_API_URL: ${PROD_NEXT_PUBLIC_API_URL:-http://10.10.100.79:3333}
+      # ---- FIM DA SEÇÃO 'args' ----
     container_name: sistema-trocas-frontend
     restart: unless-stopped
     ports:

@@ -1,5 +1,7 @@
 // apps/backend/prisma/seed.ts - VERSÃO COMPLETA E REVISADA
-import { /*...,*/ DayOfWeek, PrismaClient, Role } from '@prisma/client';
+import { Role } from '@repo/shared-types';
+import { DayOfWeek, PrismaClient } from '../src/generated/prisma/index.js';
+
 import { hash } from 'bcryptjs';
 
 const prisma = new PrismaClient();
