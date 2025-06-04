@@ -7,8 +7,9 @@ datasource db {
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
-  // "native" será seu macOS. Adicionamos o alvo para Linux Debian Bullseye (OpenSSL 1.1.x).
-  binaryTargets = ["native", "debian-openssl-1.1.x"]
+  // Adicionamos 'debian-openssl-3.0.x' para compatibilidade com Debian 12 (Bookworm)
+  // 'native' é para seu macOS, e 'debian-openssl-1.1.x' para bases Debian mais antigas.
+  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
 }
 
 enum Role {

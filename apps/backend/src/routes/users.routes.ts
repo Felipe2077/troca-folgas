@@ -4,10 +4,10 @@ import { Role, userUpdateSchema } from '@repo/shared-types';
 
 import { FastifyInstance } from 'fastify';
 import { ZodError } from 'zod'; // Import ZodError
-import { authenticate } from '../hooks/authenticate.hook.js'; // Hook de autenticação
-import { logAudit } from '../lib/audit.js'; // Log
-import { prisma } from '../lib/prisma.js';
-import { userIdParamsSchema } from '../schemas/users.schema.js';
+import { authenticate } from '../hooks/authenticate.hook'; // Hook de autenticação
+import { logAudit } from '../lib/audit'; // Log
+import { prisma } from '../lib/prisma';
+import { userIdParamsSchema } from '../schemas/users.schema';
 
 export async function usersRoutes(fastify: FastifyInstance) {
   // --- Rota GET /api/users (ADMIN ONLY) ---

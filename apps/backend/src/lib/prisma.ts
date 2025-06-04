@@ -1,5 +1,5 @@
 // apps/backend/src/lib/prisma.ts
-import { PrismaClient } from '../generated/prisma/index.js';
+import { PrismaClient } from '../generated/prisma';
 
 // Cria uma instância única do PrismaClient
 export const prisma = new PrismaClient({

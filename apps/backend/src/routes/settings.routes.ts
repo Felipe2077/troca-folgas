@@ -2,9 +2,9 @@
 import { Role } from '@repo/shared-types';
 import { FastifyInstance } from 'fastify';
 import { ZodError } from 'zod';
-import { authenticate } from '../hooks/authenticate.hook.js';
-import { prisma } from '../lib/prisma.js';
-import { settingsUpdateSchema } from '../schemas/settings.schema.js'; // Importa schema
+import { authenticate } from '../hooks/authenticate.hook';
+import { prisma } from '../lib/prisma';
+import { settingsUpdateSchema } from '../schemas/settings.schema'; // Importa schema
 
 export async function settingsRoutes(fastify: FastifyInstance) {
   // --- Rota GET /api/settings (ADMIN) ---

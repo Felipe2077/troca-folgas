@@ -1,0 +1,96 @@
+# Dockerfile otimizado para produção
+
+# Stage 1: Dependencies
+FROM node:20-bookworm-slim AS deps
+
+RUN apt-get update && apt-get install -y \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+RUN npm install -g pnpm@10.6.5
+
+# Copia arquivos de configuração
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY apps/backend/package.json ./apps/backend/
+COPY packages/shared-types/package.json ./packages/shared-types/
+
+# Instala TODAS as dependências (incluindo workspace deps)
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+# Stage 2: Builder
+FROM deps AS builder
+
+WORKDIR /app
+
+# Copia código fonte
+COPY apps/backend ./apps/backend
+COPY packages/shared-types ./packages/shared-types
+
+# Remove postinstall
+RUN cd apps/backend && npm pkg delete scripts.postinstall
+
+# Build packages
+RUN pnpm --filter @repo/shared-types run build
+RUN pnpm --filter backend run build
+
+# Stage 3: Production Dependencies
+FROM deps AS prod-deps
+
+WORKDIR /app
+
+# Instala apenas dependências de produção
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts
+
+# Stage 4: Runner
+FROM node:20-bookworm-slim AS runner
+
+RUN apt-get update && apt-get install -y \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Cria usuário não-root
+RUN addgroup --gid 1001 nodejs && \
+    adduser --uid 1001 --ingroup nodejs nodejs
+
+# Copia estrutura de diretórios necessária
+RUN mkdir -p /app/apps/backend/dist /app/packages/shared-types/dist
+
+# Copia arquivos compilados
+COPY --from=builder --chown=nodejs:nodejs /app/apps/backend/dist ./apps/backend/dist
+COPY --from=builder --chown=nodejs:nodejs /app/apps/backend/src/generated ./apps/backend/src/generated
+COPY --from=builder --chown=nodejs:nodejs /app/packages/shared-types/dist ./packages/shared-types/dist
+
+# Copia node_modules de produção
+COPY --from=prod-deps --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=prod-deps --chown=nodejs:nodejs /app/apps/backend/node_modules ./apps/backend/node_modules
+COPY --from=prod-deps --chown=nodejs:nodejs /app/packages/shared-types/node_modules ./packages/shared-types/node_modules
+
+# Copia package.json files (necessários para resolução de módulos)
+COPY --from=builder --chown=nodejs:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=nodejs:nodejs /app/apps/backend/package.json ./apps/backend/package.json
+COPY --from=builder --chown=nodejs:nodejs /app/packages/shared-types/package.json ./packages/shared-types/package.json
+
+# Copia arquivos do Prisma
+COPY --from=builder --chown=nodejs:nodejs /app/apps/backend/prisma ./apps/backend/prisma
+
+USER nodejs
+
+ENV NODE_ENV=production
+ENV PORT=3000
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); })"
+
+# Muda o working directory para onde está o código
+WORKDIR /app/apps/backend
+
+# Executa a partir do diretório correto
+CMD ["node", "dist/server.js"]

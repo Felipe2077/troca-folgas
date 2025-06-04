@@ -12,8 +12,6 @@ COPY package.json ./
 # Copia os package.json e o código fonte de TODOS os pacotes e apps
 COPY apps ./apps
 COPY packages ./packages
-# REMOVIDO: Cópia de configs da raiz (postcss, tailwind, tsconfig.base)
-# O build do Next.js usará os configs dentro de apps/frontend/
 
 # Instala o pnpm globalmente
 RUN npm install -g pnpm
@@ -24,12 +22,9 @@ RUN pnpm install --frozen-lockfile
 # Builda o pacote shared-types primeiro, pois o frontend depende dele
 RUN pnpm --filter @repo/shared-types run build
 
-# ---- ADICIONE ESTAS LINHAS ANTES DO 'RUN pnpm --filter frontend run build' ----
 # Declara um argumento de build que pode ser passado pelo docker compose
 ARG NEXT_PUBLIC_API_URL
-# Define a variável de ambiente DENTRO deste estágio de build para usar o argumento
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-# ---- FIM DAS ADIÇÕES ----
   
 # Builda o frontend (executa 'next build')
 RUN pnpm --filter frontend run build

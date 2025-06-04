@@ -1,12 +1,12 @@
 // apps/backend/src/routes/auth.routes.ts
 import { loginBodySchema, registerBodySchema, Role } from '@repo/shared-types';
-import { Prisma } from '../generated/prisma/index.js';
+import { Prisma } from '../generated/prisma';
 
 import { FastifyInstance } from 'fastify';
-import { authenticate } from '../hooks/authenticate.hook.js'; // Importa o hook compartilhado
-import { logAudit } from '../lib/audit.js';
-import { comparePassword, hashPassword } from '../lib/hash.js'; // Importa comparePassword
-import { prisma } from '../lib/prisma.js'; // Importa prisma
+import { authenticate } from '../hooks/authenticate.hook'; // Importa o hook compartilhado
+import { logAudit } from '../lib/audit';
+import { comparePassword, hashPassword } from '../lib/hash'; // Importa comparePassword
+import { prisma } from '../lib/prisma'; // Importa prisma
 
 declare module '@fastify/jwt' {
   // Interface para estender/definir tipos dentro do @fastify/jwt

@@ -39,10 +39,9 @@ coverage
 docs
 
 # Prisma
-# Não ignore o schema nem o client gerado
+# Não ignore o schema, mas ignore os binários gerados localmente
 **/prisma/migrations/dev
-# IMPORTANTE: Não ignorar o Prisma Client gerado
-# **/src/generated/prisma
+# # **/src/generated/prisma
 
 # Docker
 Dockerfile

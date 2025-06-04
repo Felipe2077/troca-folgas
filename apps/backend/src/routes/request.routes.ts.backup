@@ -15,10 +15,10 @@ import { swapRequestCreateBodySchema /* ... */ } from '@repo/shared-types';
 import { getISOWeek } from 'date-fns'; // Helpers de data
 import { FastifyInstance } from 'fastify';
 import { ZodError } from 'zod';
-import { authenticate } from '../hooks/authenticate.hook'; // Nosso hook de auth
-import { logAudit } from '../lib/audit';
-import { prisma } from '../lib/prisma';
-import { requestIdParamsSchema } from '../schemas/request.schema'; // Nosso schema Zod
+import { authenticate } from '../hooks/authenticate.hook.js'; // Nosso hook de auth
+import { logAudit } from '../lib/audit.js';
+import { prisma } from '../lib/prisma.js';
+import { requestIdParamsSchema } from '../schemas/request.schema.js'; // Nosso schema Zod
 
 // Helper para verificar se é Sábado ou Domingo
 function isWeekend(date: Date): boolean {
@@ -246,7 +246,7 @@ export async function requestRoutes(fastify: FastifyInstance) {
           : SwapEventType.SUBSTITUICAO;
 
         // 5. Criar Solicitação(ões) no Banco DENTRO DE UMA TRANSAÇÃO
-        const createdRequest = await prisma.$transaction(async (tx: any) => {
+        const createdRequest = await prisma.$transaction(async (tx) => {
           // Cria a solicitação ORIGINAL primeiro
           const originalRequest = await tx.swapRequest.create({
             data: {

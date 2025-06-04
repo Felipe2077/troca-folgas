@@ -1,71 +1,91 @@
-# apps/backend/Dockerfile (para cliente Prisma pré-gerado localmente)
+# Build otimizado - Assume que o Prisma Client já foi gerado localmente
 
-# Stage 1: Builder - Prepara dependências e builda o código TS
-# Usar node:20 (full) para ter um ambiente de build mais robusto
-FROM node:20 AS builder
+# Stage 1: Dependencies
+FROM node:20-bookworm-slim AS deps
+
+# Instala apenas o OpenSSL necessário para runtime
+RUN apt-get update && apt-get install -y \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-# Copia arquivos de manifesto de workspace e o package.json da raiz
-COPY pnpm-lock.yaml ./
-COPY pnpm-workspace.yaml ./
-COPY package.json ./
+# Instala pnpm
+RUN npm install -g pnpm@10.6.5
 
-# Copia os package.json e o código fonte de TODOS os pacotes e apps
-# Isso inclui apps/backend/src/generated/prisma (gerado localmente)
-# e também node_modules/@prisma/engines (que conterá o motor Linux baixado localmente)
-COPY apps ./apps
-COPY packages ./packages
-# COPY tsconfig.json ./tsconfig.base.json # Se o tsconfig do backend estender um da raiz
+# Copia arquivos de configuração do monorepo
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 
-RUN npm install -g pnpm
-# Instala todas as dependências, incluindo devDependencies para o build
-RUN pnpm install --frozen-lockfile
+# Copia os package.json dos workspaces
+COPY apps/backend/package.json ./apps/backend/
+COPY packages/shared-types/package.json ./packages/shared-types/
 
-# Builda o pacote shared-types primeiro
+# IMPORTANTE: Instala dependências SEM executar scripts
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+# Stage 2: Builder
+FROM deps AS builder
+
+WORKDIR /app
+
+# Copia o código fonte
+COPY apps/backend ./apps/backend
+COPY packages/shared-types ./packages/shared-types
+
+# IMPORTANTE: Remove o postinstall para evitar tentativa de gerar Prisma
+RUN cd apps/backend && \
+    npm pkg delete scripts.postinstall && \
+    cd ../..
+
+# Builda o shared-types primeiro
 RUN pnpm --filter @repo/shared-types run build
 
-# Builda APENAS o pacote backend (executa 'tsc')
-# NÃO rodamos 'prisma generate' aqui.
+# Builda o backend
 RUN pnpm --filter backend run build
 
-# Stage 2: Produção - Cria a imagem final leve
-# Usar node:20 (full) também para produção para garantir compatibilidade com o motor Prisma
-FROM node:20 AS production
+# Stage 3: Runner (Produção)
+FROM node:20-bookworm-slim AS runner
+
+# Instala apenas o necessário para runtime
+RUN apt-get update && apt-get install -y \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
-ENV NODE_ENV production
 
-# Copia o package.json do backend
-COPY --from=builder /app/apps/backend/package.json ./package.json
+# Cria usuário não-root para segurança
+RUN addgroup --gid 1001 nodejs && \
+    adduser --uid 1001 --ingroup nodejs nodejs
 
-# Copia arquivos de lock e workspace para instalar dependências de produção
-COPY --from=builder /app/pnpm-lock.yaml ./
-COPY --from=builder /app/pnpm-workspace.yaml ./
-COPY --from=builder /app/packages/shared-types/package.json ./packages/shared-types/package.json
-COPY --from=builder /app/packages/shared-types/dist ./packages/shared-types/dist
+# Copia os arquivos buildados
+COPY --from=builder --chown=nodejs:nodejs /app/apps/backend/dist ./dist
 
-# Instala SOMENTE as dependências de PRODUÇÃO
-RUN npm install -g pnpm
-RUN pnpm install --prod
+# IMPORTANTE: Copia o Prisma Client já gerado
+COPY --from=builder --chown=nodejs:nodejs /app/apps/backend/src/generated ./src/generated
 
-# Copia o código JavaScript buildado (pasta dist) do backend
-COPY --from=builder /app/apps/backend/dist ./dist
-# Copia a pasta prisma (contendo o schema)
-COPY --from=builder /app/apps/backend/prisma ./prisma
+# Copia o schema (caso precise para runtime)
+COPY --from=builder --chown=nodejs:nodejs /app/apps/backend/prisma ./prisma
 
-# Copia o Prisma Client PRÉ-GERADO (do seu ambiente local, via estágio builder)
-# para o local onde o backend espera encontrá-lo (src/generated/prisma)
-COPY --from=builder /app/apps/backend/src/generated/prisma ./dist/generated/prisma
+# Copia as dependências de produção
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/apps/backend/node_modules ./apps/backend/node_modules
 
-# Copia o MOTOR LINUX específico do Prisma que foi baixado/preparado
-# pelo 'prisma generate' local (com o binaryTarget correto) e copiado para o builder.
-# O Prisma Client (em src/generated/prisma) procurará por este motor.
-# O caminho exato do motor no builder pode ser /app/node_modules/@prisma/engines/ ou
-# /app/apps/backend/node_modules/.prisma/client/runtime/
-# Vamos copiar de um local comum onde o 'prisma generate' com binaryTargets os coloca.
-# Este é o motor para Debian com OpenSSL 1.1.x.
-COPY --from=builder /app/apps/backend/node_modules/.prisma/client/libquery_engine-debian-openssl-1.1.x.so.node ./node_modules/.prisma/client/
-# Ou, se estiver em @prisma/engines na raiz do node_modules do builder:
-# COPY --from=builder /app/node_modules/@prisma/engines/libquery_engine-debian-openssl-3.0.x.so.node ./node_modules/@prisma/engines/
+# Copia o shared-types buildado
+COPY --from=builder --chown=nodejs:nodejs /app/packages/shared-types/dist ./packages/shared-types/dist
 
-EXPOSE 3333
-CMD [ "node", "dist/server.js" ]
+# Define usuário não-root
+USER nodejs
+
+# Variáveis de ambiente
+ENV NODE_ENV=production
+ENV PORT=3000
+
+EXPOSE 3000
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); })"
+
+CMD ["node", "dist/server.js"]
