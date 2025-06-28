@@ -1,10 +1,9 @@
-// apps/frontend/src/components/admin/DashboardFilters.tsx - LAYOUT COM FLEXBOX
-'use client';
-
+// src/components/admin/DashboardFilters.tsx
 import { Button } from '@/components/ui/button';
 import { DateRangePicker } from '@/components/ui/daterangepicker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+
 import {
   Select,
   SelectContent,
@@ -18,280 +17,336 @@ import {
   SwapEventType,
   SwapStatus,
 } from '@repo/shared-types';
-import { endOfMonth, parse, startOfMonth } from 'date-fns';
-import { X } from 'lucide-react';
+import {
+  BarChart3,
+  Calendar,
+  Filter,
+  Settings,
+  Tag,
+  Users,
+  X,
+} from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 
-// Atualiza Props para os novos filtros de data
 interface DashboardFiltersProps {
   statusFilter: SwapStatus | 'ALL';
   setStatusFilter: (value: SwapStatus | 'ALL') => void;
-  swapDateRange: DateRange | undefined;
-  setSwapDateRange: (value: DateRange | undefined) => void;
-  paybackDateRange: DateRange | undefined;
-  setPaybackDateRange: (value: DateRange | undefined) => void;
   employeeIdOutFilter: string;
   setEmployeeIdOutFilter: (value: string) => void;
   employeeIdInFilter: string;
   setEmployeeIdInFilter: (value: string) => void;
   employeeFunctionFilter: EmployeeFunction | 'ALL';
   setEmployeeFunctionFilter: (value: EmployeeFunction | 'ALL') => void;
+  eventTypeFilter: SwapEventType | 'ALL';
+  setEventTypeFilter: (value: SwapEventType | 'ALL') => void;
   groupOutFilter: ReliefGroup | 'ALL';
   setGroupOutFilter: (value: ReliefGroup | 'ALL') => void;
   groupInFilter: ReliefGroup | 'ALL';
   setGroupInFilter: (value: ReliefGroup | 'ALL') => void;
-  eventTypeFilter: SwapEventType | 'ALL';
-  setEventTypeFilter: (value: SwapEventType | 'ALL') => void;
+  swapDateRange: DateRange | undefined;
+  setSwapDateRange: (value: DateRange | undefined) => void;
+  paybackDateRange: DateRange | undefined;
+  setPaybackDateRange: (value: DateRange | undefined) => void;
+  clearFilters: () => void;
 }
 
-// Constantes de opções (inalteradas)
-const employeeFunctionOptions = Object.values(EmployeeFunction);
-const reliefGroupOptions = Object.values(ReliefGroup);
-const swapEventTypeOptions = Object.values(SwapEventType);
-const swapStatusOptions = Object.values(SwapStatus);
-
-export function DashboardFilters({
+export const DashboardFilters = ({
   statusFilter,
   setStatusFilter,
-  swapDateRange,
-  setSwapDateRange,
-  paybackDateRange,
-  setPaybackDateRange,
   employeeIdOutFilter,
   setEmployeeIdOutFilter,
   employeeIdInFilter,
   setEmployeeIdInFilter,
   employeeFunctionFilter,
   setEmployeeFunctionFilter,
+  eventTypeFilter,
+  setEventTypeFilter,
   groupOutFilter,
   setGroupOutFilter,
   groupInFilter,
   setGroupInFilter,
-  eventTypeFilter,
-  setEventTypeFilter,
-}: DashboardFiltersProps) {
-  const clearFilters = () => {
-    setStatusFilter('ALL');
-    setSwapDateRange(undefined);
-    setPaybackDateRange(undefined);
-    setEmployeeIdOutFilter('');
-    setEmployeeIdInFilter('');
-    setEmployeeFunctionFilter('ALL');
-    setGroupOutFilter('ALL');
-    setGroupInFilter('ALL');
-    setEventTypeFilter('ALL');
-  };
-
+  swapDateRange,
+  setSwapDateRange,
+  paybackDateRange,
+  setPaybackDateRange,
+  clearFilters,
+}: DashboardFiltersProps) => {
   return (
-    <div className="flex flex-wrap justify-between items-end gap-x-4 gap-y-2 mb-4 p-4 border rounded-lg bg-card">
-      {/* Filtro Status */}
-      <div className="grid gap-1.5">
-        {' '}
-        <Label htmlFor="status-filter" className="text-xs">
-          Status:
-        </Label>{' '}
-        <Select
-          value={statusFilter}
-          onValueChange={(v) =>
-            setStatusFilter(v === 'ALL' ? 'ALL' : (v as SwapStatus))
-          }
-        >
-          {' '}
-          <SelectTrigger id="status-filter" className="h-8 w-full">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>{' '}
-          <SelectContent>
-            <SelectItem value="ALL">Todos</SelectItem>
-            {swapStatusOptions.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
-              </SelectItem>
-            ))}
-          </SelectContent>{' '}
-        </Select>{' '}
-      </div>
-      {/* Filtro Crachá Saída */}
-      <div className="grid gap-1.5">
-        {' '}
-        <Label htmlFor="idOut-filter" className="text-xs">
-          Crachá Sai:
-        </Label>{' '}
-        <Input
-          id="idOut-filter"
-          placeholder="Crachá..."
-          value={employeeIdOutFilter}
-          onChange={(e) => setEmployeeIdOutFilter(e.target.value)}
-          className="h-8 w-full"
-        />{' '}
-      </div>
-      {/* Filtro Crachá Entrada */}
-      <div className="grid gap-1.5">
-        {' '}
-        <Label htmlFor="idIn-filter" className="text-xs">
-          Crachá Entra:
-        </Label>{' '}
-        <Input
-          id="idIn-filter"
-          placeholder="Crachá..."
-          value={employeeIdInFilter}
-          onChange={(e) => setEmployeeIdInFilter(e.target.value)}
-          className="h-8 w-full"
-        />{' '}
-      </div>
-      {/* Filtro Função */}
-      <div className="grid gap-1.5">
-        {' '}
-        <Label htmlFor="function-filter" className="text-xs">
-          Função:
-        </Label>{' '}
-        <Select
-          value={employeeFunctionFilter}
-          onValueChange={(v) =>
-            setEmployeeFunctionFilter(
-              v === 'ALL' ? 'ALL' : (v as EmployeeFunction)
-            )
-          }
-        >
-          {' '}
-          <SelectTrigger id="function-filter" className="h-8 w-full">
-            <SelectValue placeholder="Função" />
-          </SelectTrigger>{' '}
-          <SelectContent>
-            {/*...*/}
-            <SelectItem value="ALL">Todas</SelectItem>
-            {employeeFunctionOptions.map((f) => (
-              <SelectItem key={f} value={f}>
-                {f}
-              </SelectItem>
-            ))}
-          </SelectContent>{' '}
-        </Select>{' '}
-      </div>
-      {/* Filtro Tipo Evento */}
-      <div className="grid gap-1.5">
-        {' '}
-        <Label htmlFor="eventType-filter" className="text-xs">
-          Tipo:
-        </Label>{' '}
-        <Select
-          value={eventTypeFilter}
-          onValueChange={(v) =>
-            setEventTypeFilter(v === 'ALL' ? 'ALL' : (v as SwapEventType))
-          }
-        >
-          {' '}
-          <SelectTrigger id="eventType-filter" className="h-8 w-full">
-            <SelectValue placeholder="Tipo" />
-          </SelectTrigger>{' '}
-          <SelectContent>
-            {/*...*/}
-            <SelectItem value="ALL">Todos</SelectItem>
-            {swapEventTypeOptions.map((t) => (
-              <SelectItem key={t} value={t}>
-                {t}
-              </SelectItem>
-            ))}
-          </SelectContent>{' '}
-        </Select>{' '}
+    <div className="bg-black/40 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/30 mb-8">
+      <div className="flex items-center space-x-2 mb-6">
+        <Filter className="h-5 w-5 text-yellow-400" />
+        <h3 className="text-lg font-semibold text-white">Filtros</h3>
       </div>
 
-      {/* Filtro Grupo Saída */}
-      <div className="grid gap-1.5">
-        {' '}
-        <Label htmlFor="groupOut-filter" className="text-xs">
-          Grupo Sai:
-        </Label>{' '}
-        <Select
-          value={groupOutFilter}
-          onValueChange={(v) =>
-            setGroupOutFilter(v === 'ALL' ? 'ALL' : (v as ReliefGroup))
-          }
-        >
-          {' '}
-          <SelectTrigger id="groupOut-filter" className="h-8 w-full">
-            <SelectValue placeholder="Grupo Saída" />
-          </SelectTrigger>{' '}
-          <SelectContent>
-            {/*...*/}
-            <SelectItem value="ALL">Todos</SelectItem>
-            {reliefGroupOptions.map((g) => (
-              <SelectItem key={g} value={g}>
-                {g}
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+        {/* Status Filter */}
+        <div className="space-y-1 w-32">
+          <Label
+            htmlFor="status-filter"
+            className="text-xs text-gray-400 flex items-center"
+          >
+            <Tag className="h-3 w-3 mr-1" />
+            Status:
+          </Label>
+          <Select
+            value={statusFilter}
+            onValueChange={(value) =>
+              setStatusFilter(value as SwapStatus | 'ALL')
+            }
+          >
+            <SelectTrigger
+              id="status-filter"
+              className="h-9 bg-gray-800/50 border-gray-600/50 text-white text-sm w-full"
+            >
+              <SelectValue placeholder="Todos" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-800 border-gray-700">
+              <SelectItem value="ALL" className="text-white hover:bg-gray-700">
+                Todos
               </SelectItem>
-            ))}
-          </SelectContent>{' '}
-        </Select>{' '}
-      </div>
-      {/* Filtro Grupo Entrada */}
-      <div className="grid gap-1.5">
-        {' '}
-        <Label htmlFor="groupIn-filter" className="text-xs">
-          Grupo Entra:
-        </Label>{' '}
-        <Select
-          value={groupInFilter}
-          onValueChange={(v) =>
-            setGroupInFilter(v === 'ALL' ? 'ALL' : (v as ReliefGroup))
-          }
-        >
-          {' '}
-          <SelectTrigger id="groupIn-filter" className="h-8 w-full">
-            <SelectValue placeholder="Grupo Entrada" />
-          </SelectTrigger>{' '}
-          <SelectContent>
-            {/*...*/}
-            <SelectItem value="ALL">Todos</SelectItem>
-            {reliefGroupOptions.map((g) => (
-              <SelectItem key={g} value={g}>
-                {g}
+              {Object.values(SwapStatus).map((status) => (
+                <SelectItem
+                  key={status}
+                  value={status}
+                  className="text-white hover:bg-gray-700 text-sm"
+                >
+                  {status}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Crachá Sai */}
+        <div className="space-y-1 w-40">
+          <Label
+            htmlFor="cracha-sai"
+            className="text-xs text-gray-400 flex items-center"
+          >
+            <Users className="h-3 w-3 mr-1" />
+            Crachá Sai:
+          </Label>
+          <Input
+            id="cracha-sai"
+            placeholder="Crachá..."
+            value={employeeIdOutFilter}
+            onChange={(e) => setEmployeeIdOutFilter(e.target.value)}
+            className="h-9 bg-gray-800/50 border-gray-600/50 text-white placeholder-gray-400 text-sm w-full"
+          />
+        </div>
+
+        {/* Crachá Entra */}
+        <div className="space-y-1 w-40">
+          <Label
+            htmlFor="cracha-entra"
+            className="text-xs text-gray-400 flex items-center"
+          >
+            <Users className="h-3 w-3 mr-1" />
+            Crachá Entra:
+          </Label>
+          <Input
+            id="cracha-entra"
+            placeholder="Crachá..."
+            value={employeeIdInFilter}
+            onChange={(e) => setEmployeeIdInFilter(e.target.value)}
+            className="h-9 bg-gray-800/50 border-gray-600/50 text-white placeholder-gray-400 text-sm w-full"
+          />
+        </div>
+
+        {/* Função */}
+        <div className="space-y-1 w-32">
+          <Label
+            htmlFor="funcao-filter"
+            className="text-xs text-gray-400 flex items-center"
+          >
+            <Settings className="h-3 w-3 mr-1" />
+            Função:
+          </Label>
+          <Select
+            value={employeeFunctionFilter}
+            onValueChange={(value) =>
+              setEmployeeFunctionFilter(value as EmployeeFunction | 'ALL')
+            }
+          >
+            <SelectTrigger
+              id="funcao-filter"
+              className="h-9 bg-gray-800/50 border-gray-600/50 text-white text-sm w-full"
+            >
+              <SelectValue placeholder="Todos" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-800 border-gray-700">
+              <SelectItem value="ALL" className="text-white hover:bg-gray-700">
+                Todos
               </SelectItem>
-            ))}
-          </SelectContent>{' '}
-        </Select>{' '}
-      </div>
+              {Object.values(EmployeeFunction).map((func) => (
+                <SelectItem
+                  key={func}
+                  value={func}
+                  className="text-white hover:bg-gray-700 text-sm"
+                >
+                  {func}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      {/* *** MODIFICADO/ADICIONADO: Filtros de Data Específicos *** */}
-      {/* Filtro Data Troca */}
-      <div className="grid gap-1.5 md:col-span-2">
-        {' '}
-        {/* Ocupa mais espaço */}
-        <Label htmlFor="swap-date-filter" className="text-xs">
-          Período Data Troca:
-        </Label>
-        <DateRangePicker
-          id="swap-date-filter"
-          date={swapDateRange}
-          setDate={setSwapDateRange}
-        />
-      </div>
-      {/* Filtro Data Pagamento */}
-      <div className="grid gap-1.5 md:col-span-2">
-        {' '}
-        {/* Ocupa mais espaço */}
-        <Label htmlFor="payback-date-filter" className="text-xs">
-          Período Data Pagamento:
-        </Label>
-        <DateRangePicker
-          id="payback-date-filter"
-          date={paybackDateRange}
-          setDate={setPaybackDateRange}
-        />
-      </div>
-      {/* *** FIM DA MODIFICAÇÃO/ADIÇÃO DE DATAS *** */}
+        {/* Tipo */}
+        <div className="space-y-1 w-32">
+          <Label
+            htmlFor="tipo-filter"
+            className="text-xs text-gray-400 flex items-center"
+          >
+            <BarChart3 className="h-3 w-3 mr-1" />
+            Tipo:
+          </Label>
+          <Select
+            value={eventTypeFilter}
+            onValueChange={(value) =>
+              setEventTypeFilter(value as SwapEventType | 'ALL')
+            }
+          >
+            <SelectTrigger
+              id="tipo-filter"
+              className="h-9 bg-gray-800/50 border-gray-600/50 text-white text-sm w-full"
+            >
+              <SelectValue placeholder="Todos" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-800 border-gray-700">
+              <SelectItem value="ALL" className="text-white hover:bg-gray-700">
+                Todos
+              </SelectItem>
+              {Object.values(SwapEventType).map((type) => (
+                <SelectItem
+                  key={type}
+                  value={type}
+                  className="text-white hover:bg-gray-700 text-sm"
+                >
+                  {type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      {/* Botão Limpar Filtros */}
-      <div className="flex items-end">
-        <Button
-          variant="outline"
-          onClick={clearFilters}
-          title="Limpar todos os filtros"
-          size="sm"
-          className="h-8 w-full"
-        >
-          {' '}
-          <X className="h-4 w-4 mr-1" /> Limpar
-        </Button>
+        {/* Grupo Sai */}
+        <div className="space-y-1 w-32">
+          <Label
+            htmlFor="grupo-sai"
+            className="text-xs text-gray-400 flex items-center"
+          >
+            <Users className="h-3 w-3 mr-1" />
+            Grupo Sai:
+          </Label>
+          <Select
+            value={groupOutFilter}
+            onValueChange={(value) =>
+              setGroupOutFilter(value as ReliefGroup | 'ALL')
+            }
+          >
+            <SelectTrigger
+              id="grupo-sai"
+              className="h-9 bg-gray-800/50 border-gray-600/50 text-white text-sm w-full"
+            >
+              <SelectValue placeholder="Todos" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-800 border-gray-700">
+              <SelectItem value="ALL" className="text-white hover:bg-gray-700">
+                Todos
+              </SelectItem>
+              {Object.values(ReliefGroup).map((group) => (
+                <SelectItem
+                  key={group}
+                  value={group}
+                  className="text-white hover:bg-gray-700 text-sm"
+                >
+                  {group}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Grupo Entra */}
+        <div className="space-y-1 w-32">
+          <Label
+            htmlFor="grupo-entra"
+            className="text-xs text-gray-400 flex items-center"
+          >
+            <Users className="h-3 w-3 mr-1" />
+            Grupo Entra:
+          </Label>
+          <Select
+            value={groupInFilter}
+            onValueChange={(value) =>
+              setGroupInFilter(value as ReliefGroup | 'ALL')
+            }
+          >
+            <SelectTrigger
+              id="grupo-entra"
+              className="h-9 bg-gray-800/50 border-gray-600/50 text-white text-sm w-full"
+            >
+              <SelectValue placeholder="Todos" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-800 border-gray-700">
+              <SelectItem value="ALL" className="text-white hover:bg-gray-700">
+                Todos
+              </SelectItem>
+              {Object.values(ReliefGroup).map((group) => (
+                <SelectItem
+                  key={group}
+                  value={group}
+                  className="text-white hover:bg-gray-700 text-sm"
+                >
+                  {group}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Período Data Troca - REMOVIDA A CONDIÇÃO {selectedVigencia === 'ALL' && ...} */}
+        <div className="space-y-1 w-56">
+          <Label className="text-xs text-gray-400 flex items-center">
+            <Calendar className="h-3 w-3 mr-1" />
+            Período Data Troca:
+          </Label>
+          <DateRangePicker
+            date={swapDateRange}
+            onDateChange={setSwapDateRange}
+            placeholder="Selecione o período"
+            className="h-9 bg-gray-800/50 border-gray-600/50 text-white text-sm w-full"
+          />
+        </div>
+
+        {/* Período Data Pagamento - REMOVIDA A CONDIÇÃO {selectedVigencia === 'ALL' && ...} */}
+        <div className="space-y-1 w-56">
+          <Label className="text-xs text-gray-400 flex items-center">
+            <Calendar className="h-3 w-3 mr-1" />
+            Período Data Pagamento:
+          </Label>
+          <DateRangePicker
+            date={paybackDateRange}
+            onDateChange={setPaybackDateRange}
+            placeholder="Selecione o período"
+            className="h-9 bg-gray-800/50 border-gray-600/50 text-white text-sm w-full"
+          />
+        </div>
+
+        {/* Botão Limpar */}
+        <div className="w-24">
+          <Label className="text-xs text-transparent">.</Label>
+          <Button
+            onClick={clearFilters}
+            variant="outline"
+            size="sm"
+            className="h-9 text-gray-300 border-gray-600 hover:bg-gray-700/30 text-sm w-full"
+          >
+            <X className="h-3 w-3 mr-2" />
+            Limpar
+          </Button>
+        </div>
       </div>
     </div>
   );
-}
+};

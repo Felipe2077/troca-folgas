@@ -1,181 +1,96 @@
-// apps/frontend/src/components/admin/ObservationDialog.tsx
-'use client';
+// src/components/admin/ObservationDialog.tsx
 
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
-  DialogClose, // Para botão de fechar/cancelar
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { SwapRequest } from '@repo/shared-types'; // Importa tipo
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { SwapRequest } from '@repo/shared-types';
 import { useEffect, useState } from 'react';
 
-// Tipos locais
 interface ObservationDialogProps {
-  request: SwapRequest | null; // Recebe a solicitação inteira ou null para fechar
-  onOpenChange: (open: boolean) => void; // Função para controlar abertura/fechamento
+  request: SwapRequest | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSave: (observation: string) => void;
 }
 
-interface UpdateObservationParams {
-  requestId: number;
-  observation: string | null;
-  token: string;
-}
-
-// Função que chama a API PATCH
-async function updateObservationApi({
-  requestId,
-  observation,
-  token,
-}: UpdateObservationParams): Promise<SwapRequest> {
-  // Log para verificar se o parâmetro foi recebido
-  console.log(
-    '>>> updateObservationApi received - requestId:',
-    requestId,
-    'observation:',
-    observation,
-    'token exists:',
-    !!token
-  );
-
-  // Monta a URL e loga antes do fetch
-  const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/requests/${requestId}`;
-
-  // Tenta o fetch
-  const response = await fetch(apiUrl, {
-    // Usa a variável apiUrl
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      observation: observation === '' ? null : observation,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response
-      .json()
-      .catch(() => ({ message: `Erro ${response.status}` }));
-    console.error('>>> updateObservationApi - Fetch error:', errorData); // Loga o erro antes de lançar
-    throw new Error(errorData.message || 'Falha ao atualizar observação.');
-  }
-  const data = await response.json();
-  return data.request;
-}
-
-export function ObservationDialog({
+export const ObservationDialog = ({
   request,
+  open,
   onOpenChange,
-}: ObservationDialogProps) {
-  const [observationText, setObservationText] = useState('');
-  const queryClient = useQueryClient(); // Hook para invalidar cache
+  onSave,
+}: ObservationDialogProps) => {
+  // Estado interno APENAS para o conteúdo do textarea
+  const [observation, setObservation] = useState('');
 
-  // Atualiza o texto no state local quando o 'request' (prop) mudar
+  // Este useEffect garante que o texto no modal seja atualizado
+  // sempre que uma nova solicitação for selecionada.
   useEffect(() => {
-    if (request) {
-      setObservationText(request.observation || ''); // Usa '' se for null
+    if (open && request) {
+      setObservation(request.observation || '');
     } else {
-      setObservationText(''); // Limpa ao fechar
+      // Limpa o texto quando o modal é fechado, para não mostrar dados antigos
+      setObservation('');
     }
-  }, [request]);
-
-  // Mutação para salvar a observação
-  const mutation = useMutation<SwapRequest, Error, string | null>({
-    // Resposta, Erro, Input (obs)
-    mutationFn: async (newObservation) => {
-      if (!request) throw new Error('Nenhuma solicitação selecionada.');
-      const token = localStorage.getItem('authToken');
-      if (!token) throw new Error('Token não encontrado.');
-
-      return updateObservationApi({
-        requestId: request.id,
-        observation: newObservation,
-        token,
-      });
-    },
-    onSuccess: () => {
-      console.log('Observação salva com sucesso!');
-      // Invalida a query da dashboard para forçar refetch
-      queryClient.invalidateQueries({ queryKey: ['adminSwapRequests'] });
-      onOpenChange(false); // Fecha o dialog
-      // TODO: Mostrar um Toast de sucesso
-    },
-    onError: (error) => {
-      console.error('Erro ao salvar observação:', error);
-      // TODO: Mostrar um Toast de erro
-      alert(`Erro ao salvar: ${error.message}`); // Alert temporário
-    },
-  });
+  }, [open, request]);
 
   const handleSave = () => {
-    // Chama a mutação passando o texto atual do state
-    mutation.mutate(observationText);
+    // A função onSave que vem da página principal é chamada
+    onSave(observation);
+    // Não fechamos o modal aqui. A página principal fará isso no 'onSuccess'.
   };
 
-  // Determina se o dialog deve estar aberto baseado na prop 'request'
-  const isOpen = request !== null;
+  // O componente Dialog do shadcn/ui já gerencia o estado de abertura
+  // corretamente através das props 'open' e 'onOpenChange'.
+  // Não precisamos de um estado de 'open' interno aqui.
+
+  if (!request) {
+    return null;
+  }
 
   return (
-    // Controla a abertura/fechamento pelo estado do componente pai via onOpenChange
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px] bg-gray-900 border-gray-700 text-white">
         <DialogHeader>
-          <DialogTitle>Observação - Solicitação ID: {request?.id}</DialogTitle>
+          <DialogTitle>Editar Observação</DialogTitle>
           <DialogDescription>
-            Adicione ou edite a observação para esta solicitação. Clique em
-            salvar quando terminar.
+            Adicione ou edite a observação para a solicitação ID: {request.id}.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="observation-text" className="text-right">
-              Observação
-            </Label>
-            <Textarea
-              id="observation-text"
-              value={observationText}
-              onChange={(e) => setObservationText(e.target.value)}
-              className="col-span-3 h-24" // Textarea maior
-              disabled={mutation.isPending} // Desabilita enquanto salva
-            />
-          </div>
-          {/* Mostra erro da mutação, se houver */}
-          {mutation.isError && (
-            <p className="text-sm font-medium text-destructive col-span-4 text-center">
-              Erro: {mutation.error?.message || 'Ocorreu um erro.'}
-            </p>
-          )}
+        <div className="py-4">
+          <Textarea
+            id="observation"
+            value={observation}
+            onChange={(e) => setObservation(e.target.value)}
+            className="col-span-3 bg-gray-800 border-gray-600 text-white"
+            rows={4}
+            placeholder="Digite a observação aqui..."
+          />
         </div>
         <DialogFooter>
-          {/* Botão para fechar sem salvar */}
-          <DialogClose asChild>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={mutation.isPending}
-            >
-              Cancelar
-            </Button>
-          </DialogClose>
-          {/* Botão para salvar */}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="text-white border-gray-600 hover:bg-gray-700"
+          >
+            Cancelar
+          </Button>
           <Button
             type="button"
             onClick={handleSave}
-            disabled={mutation.isPending}
+            className="bg-yellow-500 hover:bg-yellow-600 text-black"
           >
-            {mutation.isPending ? 'Salvando...' : 'Salvar Observação'}
+            Salvar
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-}
+};
