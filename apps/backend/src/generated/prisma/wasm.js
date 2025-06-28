@@ -207,6 +207,7 @@ exports.SwapEventType = exports.$Enums.SwapEventType = {
 };
 
 exports.SwapStatus = exports.$Enums.SwapStatus = {
+  SOLICITADO: 'SOLICITADO',
   AGENDADO: 'AGENDADO',
   NAO_REALIZADA: 'NAO_REALIZADA',
   REALIZADO: 'REALIZADO'

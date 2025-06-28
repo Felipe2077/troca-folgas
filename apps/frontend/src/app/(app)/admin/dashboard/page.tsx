@@ -1,9 +1,9 @@
 // apps/frontend/src/app/(app)/admin/dashboard/page.tsx - COMPLETO COM FILTROS
 'use client';
+import { RequestsTable } from '@/components/admin/AdminRequestsTable'; // <-- Componente da Tabela
 import { DashboardFilters } from '@/components/admin/DashboardFilters'; // <--
 import { DashboardSummaryCards } from '@/components/admin/DashboardSummaryCards';
 import { ObservationDialog } from '@/components/admin/ObservationDialog';
-import { RequestsTable } from '@/components/admin/RequestsTable'; // <-- Componente da Tabela
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import {
   Card,
@@ -12,6 +12,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Label } from '@/components/ui/label'; // Importar Label
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'; // Importar Select
 import { useAuth } from '@/contexts/AuthContext';
 import {
   EmployeeFunction,
@@ -24,6 +32,7 @@ import {
   SwapStatus,
 } from '@repo/shared-types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { endOfMonth, parse, startOfMonth } from 'date-fns'; // Importar funções de data
 import { Loader2 } from 'lucide-react'; // Ícones
 import { useState } from 'react';
 import { DateRange } from 'react-day-picker';
@@ -157,19 +166,75 @@ async function updateRequestApi({
   return responseData.request;
 }
 
+async function fetchAdminVigencias(token: string | null): Promise<string[]> {
+  if (!token) return [];
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/requests/vigencias/all`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+  if (!response.ok) {
+    throw new Error('Falha ao buscar vigências de admin.');
+  }
+  return response.json();
+}
+
 // --- Componente Principal ---
 export default function AdminDashboardPage() {
   const queryClient = useQueryClient();
   const { token } = useAuth();
-  // Estados para Filtros
+
+  // ... (estados de filtro existentes)
   const [statusFilter, setStatusFilter] = useState<SwapStatus | 'ALL'>('ALL');
   const [swapDateRange, setSwapDateRange] = useState<DateRange | undefined>(
     undefined
   );
-
   const [paybackDateRange, setPaybackDateRange] = useState<
     DateRange | undefined
   >(undefined);
+  const [selectedVigencia, setSelectedVigencia] = useState<string>('ALL'); // Novo estado para o filtro de vigência
+
+  // Wrappers para setSwapDateRange e setPaybackDateRange para limpar selectedVigencia
+  const setSwapDateRangeWrapper = (range: DateRange | undefined) => {
+    setSwapDateRange(range);
+    if (range !== undefined) {
+      setSelectedVigencia('ALL'); // Se a data for definida manualmente, limpa a vigência
+    }
+  };
+
+  const setPaybackDateRangeWrapper = (range: DateRange | undefined) => {
+    setPaybackDateRange(range);
+    if (range !== undefined) {
+      setSelectedVigencia('ALL'); // Se a data for definida manualmente, limpa a vigência
+    }
+  };
+
+  // Query para buscar as vigências para o filtro
+  const { data: adminVigencias, isLoading: isLoadingVigencias } = useQuery<
+    string[],
+    Error
+  >({
+    queryKey: ['adminVigencias'],
+    queryFn: () => fetchAdminVigencias(token),
+    enabled: !!token,
+  });
+
+  // Handler para o Select de Vigência
+  const handleVigenciaChange = (value: string) => {
+    setSelectedVigencia(value);
+    if (value === 'ALL') {
+      setSwapDateRange(undefined);
+      setPaybackDateRange(undefined);
+    } else {
+      const monthDate = parse(value, 'yyyy-MM', new Date());
+      const from = startOfMonth(monthDate);
+      const to = endOfMonth(monthDate);
+      setSwapDateRange({ from, to });
+      setPaybackDateRange({ from, to });
+    }
+  };
+
   // Query para buscar os dados do resumo para os cards
   const { data: summaryData, isLoading: isLoadingSummary } = useQuery<
     RequestSummaryData,
@@ -247,13 +312,14 @@ export default function AdminDashboardPage() {
       eventTypeFilter,
       sortColumn,
       sortDirection,
+      selectedVigencia !== 'ALL' ? selectedVigencia : undefined, // Adicionar selectedVigencia à queryKey apenas se não for 'ALL'
     ],
     queryFn: () =>
       fetchSwapRequests(
         // <-- Passa os novos ranges
         statusFilter,
-        swapDateRange,
-        paybackDateRange,
+        selectedVigencia === 'ALL' ? swapDateRange : undefined, // Passa swapDateRange apenas se selectedVigencia for 'ALL'
+        selectedVigencia === 'ALL' ? paybackDateRange : undefined, // Passa paybackDateRange apenas se selectedVigencia for 'ALL'
         sortColumn,
         sortDirection,
         employeeIdOutFilter,
@@ -324,11 +390,37 @@ export default function AdminDashboardPage() {
   return (
     <ProtectedRoute allowedRoles={[Role.ADMINISTRADOR]}>
       <Card>
-        <CardHeader>
-          <CardTitle>Dashboard do Administrador</CardTitle>
-          <CardDescription>
-            Visualize e gerencie as solicitações.
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div className="flex flex-col">
+            <CardTitle className="text-2xl font-bold">
+              Dashboard do Administrador
+            </CardTitle>
+            <CardDescription>
+              Visualize e gerencie as solicitações.
+            </CardDescription>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="vigencia-filter" className="text-xs">
+              Vigência:
+            </Label>
+            <Select
+              value={selectedVigencia}
+              onValueChange={handleVigenciaChange}
+              disabled={isLoadingVigencias}
+            >
+              <SelectTrigger id="vigencia-filter" className="h-8 w-[180px]">
+                <SelectValue placeholder="Selecione um mês..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Todos os Períodos</SelectItem>
+                {adminVigencias?.map((vigencia) => (
+                  <SelectItem key={vigencia} value={vigencia}>
+                    {vigencia}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           <DashboardSummaryCards
@@ -339,11 +431,10 @@ export default function AdminDashboardPage() {
           <DashboardFilters
             statusFilter={statusFilter}
             setStatusFilter={setStatusFilter}
-            // dateRange={dateRange} setDateRange={setDateRange} // <-- REMOVA ESTAS
             swapDateRange={swapDateRange}
-            setSwapDateRange={setSwapDateRange} // <-- ADICIONE ESTAS
+            setSwapDateRange={setSwapDateRangeWrapper}
             paybackDateRange={paybackDateRange}
-            setPaybackDateRange={setPaybackDateRange} // <-- ADICIONE ESTAS
+            setPaybackDateRange={setPaybackDateRangeWrapper}
             // Passa todos os outros filtros também
             employeeIdOutFilter={employeeIdOutFilter}
             setEmployeeIdOutFilter={setEmployeeIdOutFilter}
@@ -367,8 +458,7 @@ export default function AdminDashboardPage() {
           )}
           {isError && (
             <div className="text-center p-4 text-destructive bg-destructive/10 rounded-md">
-              Erro ao buscar solicitações:{' '}
-              {error?.message || 'Erro desconhecido'}
+              {`Erro ao buscar solicitações: ${error?.message || 'Erro desconhecido'}`}
             </div>
           )}
           {!isQueryLoading &&

@@ -3,7 +3,7 @@
  * Client
 **/
 
-import * as runtime from './runtime/library';
+import * as runtime from './runtime/library.js';
 import $Types = runtime.Types // general types
 import $Public = runtime.Types.Public
 import $Utils = runtime.Types.Utils
@@ -74,6 +74,7 @@ export type SwapEventType = (typeof SwapEventType)[keyof typeof SwapEventType]
 
 
 export const SwapStatus: {
+  SOLICITADO: 'SOLICITADO',
   AGENDADO: 'AGENDADO',
   NAO_REALIZADA: 'NAO_REALIZADA',
   REALIZADO: 'REALIZADO'

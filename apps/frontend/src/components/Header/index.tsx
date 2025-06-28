@@ -53,6 +53,18 @@ export function Header() {
                       </span>
                     </Button>
                   </Link>
+                  <Link href="/admin/audit-logs" passHref>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      title="Logs de Auditoria"
+                    >
+                      <Users className="h-4 w-4 sm:mr-1" /> {/* Usando Users temporariamente, pode mudar para um ícone de log */}
+                      <span className="hidden sm:inline text-base">
+                        Logs
+                      </span>
+                    </Button>
+                  </Link>
                 </>
               )}
 

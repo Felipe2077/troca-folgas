@@ -31,6 +31,7 @@ export const SwapEventType = {
 export type SwapEventType = (typeof SwapEventType)[keyof typeof SwapEventType];
 
 export const SwapStatus = {
+  SOLICITADO: 'SOLICITADO',
   AGENDADO: 'AGENDADO',
   NAO_REALIZADA: 'NAO_REALIZADA',
   REALIZADO: 'REALIZADO',
@@ -49,6 +50,13 @@ export const DayOfWeek = {
 export type DayOfWeek = (typeof DayOfWeek)[keyof typeof DayOfWeek];
 
 // --- Interfaces ---
+export interface SubmittedByUser {
+  id: number;
+  name: string;
+  loginIdentifier: string;
+  role: Role;
+}
+
 export interface SwapRequest {
   id: number;
   employeeIdOut: string;
@@ -62,6 +70,7 @@ export interface SwapRequest {
   status: SwapStatus;
   observation: string | null;
   submittedById: number;
+  submittedBy?: SubmittedByUser; // Adicionar o usuário que submeteu
   isMirror?: boolean | null;
   relatedRequestId?: number | null;
   createdAt: Date | string;
@@ -282,7 +291,13 @@ const sortOrderValues = z.enum(['asc', 'desc']).default('desc');
 export const requestListQuerySchema = z
   .object({
     // Filtros existentes mantidos
-    status: z.nativeEnum(SwapStatus).optional(),
+    status: z.preprocess(
+      (val) => {
+        if (val === undefined || val === null) return undefined;
+        return Array.isArray(val) ? val : [val];
+      },
+      z.array(z.nativeEnum(SwapStatus))
+    ).optional(),
     employeeIdOut: z
       .string()
       .regex(/^[0-9]+$/)
@@ -301,20 +316,12 @@ export const requestListQuerySchema = z
     // endDate: z.coerce.date().optional(),
 
     // ADICIONE filtros para swapDate
-    swapDateStart: z.coerce
-      .date({ invalid_type_error: 'Data de Troca (Início) inválida.' })
-      .optional(),
-    swapDateEnd: z.coerce
-      .date({ invalid_type_error: 'Data de Troca (Fim) inválida.' })
-      .optional(),
+    swapDateStart: z.string().optional(),
+    swapDateEnd: z.string().optional(),
 
     // ADICIONE filtros para paybackDate
-    paybackDateStart: z.coerce
-      .date({ invalid_type_error: 'Data de Pagamento (Início) inválida.' })
-      .optional(),
-    paybackDateEnd: z.coerce
-      .date({ invalid_type_error: 'Data de Pagamento (Fim) inválida.' })
-      .optional(),
+    paybackDateStart: z.string().optional(),
+    paybackDateEnd: z.string().optional(),
 
     // Ordenação mantida
     sortBy: sortableColumns.optional(),
@@ -370,9 +377,10 @@ export type UserUpdateInput = z.infer<typeof userUpdateSchema>;
 // Tipo para os dados retornados pela API GET /api/requests/summary
 export type RequestSummaryData = {
   byStatus: {
+    [SwapStatus.SOLICITADO]: number;
     [SwapStatus.AGENDADO]: number;
-    [SwapStatus.REALIZADO]: number;
     [SwapStatus.NAO_REALIZADA]: number;
+    [SwapStatus.REALIZADO]: number;
   };
   byType: {
     [SwapEventType.TROCA]: number;
@@ -382,6 +390,21 @@ export type RequestSummaryData = {
     scheduledPastDue: number;
   };
 };
+
+// Schema para Query Params de GET /audit
+export const auditLogListQuerySchema = z.object({
+  action: z.string().optional(),
+  userId: z.coerce.number().int().optional(),
+  userLoginIdentifier: z.string().optional(), // Novo filtro
+  timestampStart: z.string().optional(), // Novo filtro
+  timestampEnd: z.string().optional(), // Novo filtro
+  targetResourceType: z.string().optional(),
+  limit: z.coerce.number().int().min(1).default(10),
+  offset: z.coerce.number().int().min(0).default(0),
+  sortBy: z.enum(['timestamp', 'action', 'userLoginIdentifier']).default('timestamp'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
+export type AuditLogListQuery = z.infer<typeof auditLogListQuerySchema>;
 
 // Schema para Query Params de GET /requests (já deve existir e estar atualizado)
 const sortableColumnsValues = [

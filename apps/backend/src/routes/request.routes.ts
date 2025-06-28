@@ -14,7 +14,7 @@ import {
 import { swapRequestCreateBodySchema /* ... */ } from '@repo/shared-types';
 import { getISOWeek } from 'date-fns'; // Helpers de data
 import { FastifyInstance } from 'fastify';
-import { ZodError } from 'zod';
+import { z, ZodError } from 'zod';
 import { authenticate } from '../hooks/authenticate.hook'; // Nosso hook de auth
 import { logAudit } from '../lib/audit';
 import { prisma } from '../lib/prisma';
@@ -39,9 +39,10 @@ function areDatesInSameISOWeek(date1: Date, date2: Date): boolean {
 export async function requestRoutes(fastify: FastifyInstance) {
   fastify.get('/', { onRequest: [authenticate] }, async (request, reply) => {
     try {
-      // 1. Verificar Role Admin (mantido)
+      // 1. Verificar Role e aplicar filtro de usuário se não for Admin
+      const whereClause: Prisma.SwapRequestWhereInput = {};
       if (request.user.role !== Role.ADMINISTRADOR) {
-        return reply.status(403).send({ message: 'Acesso negado.' });
+        whereClause.submittedById = parseInt(request.user.sub, 10);
       }
 
       // 2. Validar TODOS os Query Parameters com o schema compartilhado
@@ -50,6 +51,7 @@ export async function requestRoutes(fastify: FastifyInstance) {
       console.dir(queryParse, { depth: null }); // Mostra o resultado completo do parse
 
       if (!queryParse.success) {
+        fastify.log.error({ msg: 'Zod validation error for GET /requests', issues: queryParse.error.format() });
         return reply.status(400).send({
           message: 'Parâmetros de query inválidos.',
           issues: queryParse.error.format(),
@@ -73,10 +75,8 @@ export async function requestRoutes(fastify: FastifyInstance) {
       } = queryParse.data;
 
       // 3. Construir Cláusula Where Dinamicamente
-      const whereClause: Prisma.SwapRequestWhereInput = {};
-
-      if (status) {
-        whereClause.status = status;
+      if (status && status.length > 0) {
+        whereClause.status = { in: status };
       }
       if (employeeIdOut) {
         whereClause.employeeIdOut = employeeIdOut;
@@ -134,7 +134,7 @@ export async function requestRoutes(fastify: FastifyInstance) {
       const requests = await prisma.swapRequest.findMany({
         where: whereClause, // <-- Where dinâmico
         orderBy: orderByClause,
-        // include: { submittedBy: { select: { name: true }} } // Exemplo se quiser nome
+        include: { submittedBy: { select: { name: true, loginIdentifier: true, role: true } } } // Incluir dados do usuário que submeteu
       });
 
       // 6. Retornar a lista filtrada e ordenada
@@ -252,7 +252,7 @@ export async function requestRoutes(fastify: FastifyInstance) {
             data: {
               ...body, // Dados validados do Zod
               eventType: eventType,
-              status: SwapStatus.AGENDADO,
+              status: SwapStatus.SOLICITADO,
               submittedById: parseInt(request.user.sub, 10),
               isMirror: false, // Original não é espelho
               relatedRequestId: null, // Ainda não tem espelho ligado
@@ -426,6 +426,117 @@ export async function requestRoutes(fastify: FastifyInstance) {
     }
   );
   // --- FIM da Rota GET /summary ---
+
+  // --- NOVA Rota GET /summary/user (ENCARREGADO/ADMIN ONLY) ---
+  fastify.get(
+    '/summary/user',
+    {
+      onRequest: [authenticate], // Exige autenticação
+    },
+    async (request, reply) => {
+      try {
+        fastify.log.info('[summary/user] Received request');
+        // Apenas ENCARREGADO ou ADMINISTRADOR podem acessar este resumo
+        if (request.user.role !== Role.ENCARREGADO && request.user.role !== Role.ADMINISTRADOR) {
+          return reply.status(403).send({ message: 'Acesso negado.' });
+        }
+
+        const userId = parseInt(request.user.sub, 10);
+        fastify.log.info(`[summary/user] Parsed userId: ${userId}`);
+
+        // Validação
+        const summaryDateQuerySchema = z.object({
+          swapDateStart: z.string().optional(),
+          swapDateEnd: z.string().optional(),
+        });
+        const queryParse = summaryDateQuerySchema.safeParse(request.query);
+
+        if (!queryParse.success) {
+          fastify.log.error({ msg: '[summary/user] Validation failed', issues: queryParse.error.format() });
+          return reply.status(400).send({
+            message: 'Parâmetros de data inválidos.',
+            issues: queryParse.error.format(),
+          });
+        }
+        const { swapDateStart, swapDateEnd } = queryParse.data;
+        fastify.log.info(`[summary/user] Dates after validation: start=${swapDateStart}, end=${swapDateEnd}`);
+
+        // Construir a cláusula base
+        const whereClause: Prisma.SwapRequestWhereInput = {
+          submittedById: userId,
+        };
+
+        // Adicionar filtro de data
+        if (swapDateStart && swapDateEnd) {
+          whereClause.swapDate = {
+            gte: new Date(swapDateStart),
+            lte: new Date(swapDateEnd),
+          };
+        }
+        fastify.log.info({ msg: '[summary/user] Constructed whereClause', where: whereClause });
+
+        // Contagens sequenciais para debug
+        const countSolicitado = await prisma.swapRequest.count({ where: { ...whereClause, status: SwapStatus.SOLICITADO } });
+        fastify.log.info(`[summary/user] countSolicitado: ${countSolicitado}`);
+        
+        const countAgendado = await prisma.swapRequest.count({ where: { ...whereClause, status: SwapStatus.AGENDADO } });
+        fastify.log.info(`[summary/user] countAgendado: ${countAgendado}`);
+
+        const countRealizado = await prisma.swapRequest.count({ where: { ...whereClause, status: SwapStatus.REALIZADO } });
+        fastify.log.info(`[summary/user] countRealizado: ${countRealizado}`);
+
+        const countNaoRealizada = await prisma.swapRequest.count({ where: { ...whereClause, status: SwapStatus.NAO_REALIZADA } });
+        fastify.log.info(`[summary/user] countNaoRealizada: ${countNaoRealizada}`);
+
+        const countTroca = await prisma.swapRequest.count({ where: { ...whereClause, eventType: SwapEventType.TROCA } });
+        fastify.log.info(`[summary/user] countTroca: ${countTroca}`);
+
+        const countSubstituicao = await prisma.swapRequest.count({ where: { ...whereClause, eventType: SwapEventType.SUBSTITUICAO } });
+        fastify.log.info(`[summary/user] countSubstituicao: ${countSubstituicao}`);
+
+        // A contagem de "agendado atrasado" só faz sentido sem filtro de data
+        let countAgendadoAtrasado = 0;
+        if (!swapDateStart && !swapDateEnd) {
+            countAgendadoAtrasado = await prisma.swapRequest.count({
+                where: {
+                    submittedById: userId,
+                    status: SwapStatus.AGENDADO,
+                    OR: [ { swapDate: { lt: new Date() } }, { paybackDate: { lt: new Date() } } ],
+                }
+            });
+        }
+        fastify.log.info(`[summary/user] countAgendadoAtrasado: ${countAgendadoAtrasado}`);
+
+        // Montar e retornar o objeto de resumo
+        const summary = {
+          byStatus: {
+            [SwapStatus.SOLICITADO]: countSolicitado,
+            [SwapStatus.AGENDADO]: countAgendado,
+            [SwapStatus.REALIZADO]: countRealizado,
+            [SwapStatus.NAO_REALIZADA]: countNaoRealizada,
+          },
+          byType: {
+            [SwapEventType.TROCA]: countTroca,
+            [SwapEventType.SUBSTITUICAO]: countSubstituicao,
+          },
+          attention: {
+            scheduledPastDue: countAgendadoAtrasado,
+          },
+        };
+
+        fastify.log.info('[summary/user] Sending success response');
+        return reply.status(200).send(summary);
+
+      } catch (error: any) {
+        fastify.log.error({ msg: 'Error fetching user request summary', error: error, stack: error?.stack });
+        return reply
+          .status(500)
+          .send({ message: 'Erro interno ao buscar resumo das solicitações do usuário.' });
+      }
+    }
+  );
+  // --- FIM da Rota GET /summary/user ---
+
   // --- Rota PATCH para atualizar a observação (ADMIN) ---
   fastify.patch(
     '/:id', // Rota unificada para atualizar status e/ou observação
@@ -558,5 +669,174 @@ export async function requestRoutes(fastify: FastifyInstance) {
   );
 
   // Adicione aqui outras rotas relacionadas a requests no futuro (GET /requests, etc.)
+  // --- Rota DELETE para deletar uma solicitação ---
+  fastify.delete(
+    '/:id',
+    {
+      onRequest: [authenticate], // Protegido por autenticação
+    },
+    async (request, reply) => {
+      try {
+        // 1. Validar Parâmetro ID da URL
+        const paramsParse = requestIdParamsSchema.safeParse(request.params);
+        if (!paramsParse.success) {
+          return reply.status(400).send({
+            message: 'ID inválido.',
+            issues: paramsParse.error.format(),
+          });
+        }
+        const { id } = paramsParse.data;
+
+        // 2. Buscar a solicitação existente
+        const existingRequest = await prisma.swapRequest.findUnique({
+          where: { id },
+        });
+
+        if (!existingRequest) {
+          return reply
+            .status(404)
+            .send({ message: 'Solicitação não encontrada.' });
+        }
+
+        // 3. Verificar permissões e propriedade
+        const userId = parseInt(request.user.sub, 10);
+        const userRole = request.user.role;
+
+        // Apenas ADMIN ou o próprio ENCARREGADO que submeteu pode deletar
+        if (
+          userRole !== Role.ADMINISTRADOR &&
+          (userRole !== Role.ENCARREGADO ||
+            existingRequest.submittedById !== userId)
+        ) {
+          return reply.status(403).send({
+            message: 'Acesso negado. Você não tem permissão para deletar esta solicitação.',
+          });
+        }
+
+        // 4. Verificar status da solicitação para deleção
+        // Só pode deletar se o status for AGENDADO ou NAO_REALIZADA
+        if (
+          existingRequest.status !== SwapStatus.SOLICITADO &&
+          existingRequest.status !== SwapStatus.NAO_REALIZADA
+        ) {
+          return reply.status(400).send({
+            message:
+              'Não é possível deletar solicitações com status diferente de SOLICITADO ou NÃO REALIZADA.',
+          });
+        }
+
+        // 5. Deletar a solicitação
+        await prisma.swapRequest.delete({
+          where: { id },
+        });
+
+        // 6. Log de Auditoria
+        try {
+          const actingUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { loginIdentifier: true },
+          });
+          await logAudit({
+            prisma,
+            userId: userId,
+            userLoginIdentifier:
+              actingUser?.loginIdentifier ?? `UserID:${userId}`,
+            action: 'DELETE_SWAP_REQUEST',
+            details: `User ${actingUser?.loginIdentifier} deleted swap request ${id} (Status: ${existingRequest.status}).`,
+            targetResourceId: id,
+            targetResourceType: 'SwapRequest',
+          });
+        } catch (logError) {
+          fastify.log.error({
+            msg: 'Failed to create audit log for DELETE /requests/:id',
+            error: logError,
+          });
+        }
+
+        // 7. Retornar sucesso (204 No Content)
+        return reply.status(204).send();
+      } catch (error) {
+        if (error instanceof ZodError) {
+          return reply.status(400).send({
+            message: 'Erro de validação Zod.',
+            issues: error.format(),
+          });
+        }
+        fastify.log.error({
+          msg: 'Internal error on DELETE /requests/:id',
+          error,
+        });
+        return reply
+          .status(500)
+          .send({ message: 'Erro interno ao deletar solicitação.' });
+      }
+    }
+  );
+
   fastify.log.info('Request routes registered');
+
+  // --- Rota GET /vigencias (para saber os meses com solicitações)
+  fastify.get(
+    '/vigencias',
+    {
+      onRequest: [authenticate], // Exige autenticação
+    },
+    async (request, reply) => {
+      try {
+        const userId = parseInt(request.user.sub, 10);
+
+        // A query raw é a forma mais eficiente de obter meses distintos
+        // A sintaxe pode variar um pouco entre bancos (SQLite vs PostgreSQL)
+        // Esta sintaxe com STRFTIME é comum para SQLite.
+        const results: Array<{ month: string }> = await prisma.$queryRaw`
+          SELECT DISTINCT TO_CHAR("swapDate", 'YYYY-MM') as month
+          FROM "swap_requests"
+          WHERE "submittedById" = ${userId}
+          ORDER BY month DESC
+        `;
+
+        // Extrai apenas a string do mês do resultado
+        const activeMonths = results.map(item => item.month);
+
+        return reply.status(200).send(activeMonths);
+
+      } catch (error: any) {
+        fastify.log.error({ msg: 'Error fetching request vigencias', error: error, stack: error?.stack });
+        return reply
+          .status(500)
+          .send({ message: 'Erro interno ao buscar vigências.' });
+      }
+    }
+  );
+
+  // --- Rota GET /vigencias/all (ADMIN ONLY) ---
+  fastify.get(
+    '/vigencias/all',
+    {
+      onRequest: [authenticate], // Exige autenticação de Admin
+    },
+    async (request, reply) => {
+      try {
+        if (request.user.role !== Role.ADMINISTRADOR) {
+          return reply.status(403).send({ message: 'Acesso negado.' });
+        }
+
+        const results: Array<{ month: string }> = await prisma.$queryRaw`
+          SELECT DISTINCT TO_CHAR("swapDate", 'YYYY-MM') as month
+          FROM "swap_requests"
+          ORDER BY month DESC
+        `;
+
+        const activeMonths = results.map(item => item.month);
+
+        return reply.status(200).send(activeMonths);
+
+      } catch (error: any) {
+        fastify.log.error({ msg: 'Error fetching all vigencias', error: error, stack: error?.stack });
+        return reply
+          .status(500)
+          .send({ message: 'Erro interno ao buscar todas as vigências.' });
+      }
+    }
+  );
 }

@@ -36,6 +36,7 @@ enum SwapEventType {
 }
 
 enum SwapStatus {
+  SOLICITADO
   AGENDADO
   NAO_REALIZADA
   REALIZADO 

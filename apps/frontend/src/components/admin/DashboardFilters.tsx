@@ -18,6 +18,7 @@ import {
   SwapEventType,
   SwapStatus,
 } from '@repo/shared-types';
+import { endOfMonth, parse, startOfMonth } from 'date-fns';
 import { X } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 
@@ -26,9 +27,9 @@ interface DashboardFiltersProps {
   statusFilter: SwapStatus | 'ALL';
   setStatusFilter: (value: SwapStatus | 'ALL') => void;
   swapDateRange: DateRange | undefined;
-  setSwapDateRange: (value: DateRange | undefined) => void; // <-- Mudou
+  setSwapDateRange: (value: DateRange | undefined) => void;
   paybackDateRange: DateRange | undefined;
-  setPaybackDateRange: (value: DateRange | undefined) => void; // <-- Novo
+  setPaybackDateRange: (value: DateRange | undefined) => void;
   employeeIdOutFilter: string;
   setEmployeeIdOutFilter: (value: string) => void;
   employeeIdInFilter: string;
@@ -53,9 +54,9 @@ export function DashboardFilters({
   statusFilter,
   setStatusFilter,
   swapDateRange,
-  setSwapDateRange, // <-- Mudou
+  setSwapDateRange,
   paybackDateRange,
-  setPaybackDateRange, // <-- Novo
+  setPaybackDateRange,
   employeeIdOutFilter,
   setEmployeeIdOutFilter,
   employeeIdInFilter,
@@ -71,8 +72,8 @@ export function DashboardFilters({
 }: DashboardFiltersProps) {
   const clearFilters = () => {
     setStatusFilter('ALL');
-    setSwapDateRange(undefined); // <-- Mudou
-    setPaybackDateRange(undefined); // <-- Novo
+    setSwapDateRange(undefined);
+    setPaybackDateRange(undefined);
     setEmployeeIdOutFilter('');
     setEmployeeIdInFilter('');
     setEmployeeFunctionFilter('ALL');
@@ -82,7 +83,6 @@ export function DashboardFilters({
   };
 
   return (
-    // Container usa flex, wrap e alinha itens na base (items-end)
     <div className="flex flex-wrap justify-between items-end gap-x-4 gap-y-2 mb-4 p-4 border rounded-lg bg-card">
       {/* Filtro Status */}
       <div className="grid gap-1.5">

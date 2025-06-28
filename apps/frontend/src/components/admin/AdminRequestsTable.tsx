@@ -89,6 +89,16 @@ export function RequestsTable({
               ID {renderSortIcon('id')}
             </Button>
           </TableHead>
+          {/* Solicitante (Encarregado) */}
+          <TableHead className="w-[150px]">
+            <Button
+              variant="ghost"
+              onClick={() => handleSort('submittedById')}
+              className="px-0 justify-start"
+            >
+              Solicitante {renderSortIcon('submittedById')}
+            </Button>
+          </TableHead>
           {/* Crachá Sai Ordenável */}
           <TableHead className="w-[100px]">
             <Button
@@ -139,26 +149,6 @@ export function RequestsTable({
               Pagamento {renderSortIcon('paybackDate')}
             </Button>
           </TableHead>
-          {/* Tipo Ordenável */}
-          <TableHead className="w-[120px]">
-            <Button
-              variant="ghost"
-              onClick={() => handleSort('eventType')}
-              className="px-0 justify-start"
-            >
-              Tipo {renderSortIcon('eventType')}
-            </Button>
-          </TableHead>
-          {/* Status Ordenável */}
-          <TableHead className="w-[120px]">
-            <Button
-              variant="ghost"
-              onClick={() => handleSort('status')}
-              className="px-0 justify-start"
-            >
-              Status {renderSortIcon('status')}
-            </Button>
-          </TableHead>
           {/* Grupo Sai Ordenável */}
           <TableHead className="w-[150px]">
             <Button
@@ -177,6 +167,26 @@ export function RequestsTable({
               className="px-0 justify-start"
             >
               Grupo Entra {renderSortIcon('groupIn')}
+            </Button>
+          </TableHead>
+          {/* Tipo Ordenável */}
+          <TableHead className="w-[120px]">
+            <Button
+              variant="ghost"
+              onClick={() => handleSort('eventType')}
+              className="px-0 justify-start"
+            >
+              Tipo {renderSortIcon('eventType')}
+            </Button>
+          </TableHead>
+          {/* Status Ordenável */}
+          <TableHead className="w-[120px]">
+            <Button
+              variant="ghost"
+              onClick={() => handleSort('status')}
+              className="px-0 justify-start"
+            >
+              Status {renderSortIcon('status')}
             </Button>
           </TableHead>
           {/* Observação NÃO Ordenável */}
@@ -201,6 +211,9 @@ export function RequestsTable({
                 {/* Usa flex para alinhar ícone e texto */}
                 {req.id}
               </div>
+            </TableCell>
+            <TableCell className="text-center">
+              {req.submittedBy?.name || req.submittedBy?.loginIdentifier || 'N/A'}
             </TableCell>
             <TableCell className="text-center">{req.employeeIdOut}</TableCell>
             <TableCell className="text-center">{req.employeeIdIn}</TableCell>

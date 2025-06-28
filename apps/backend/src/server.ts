@@ -6,6 +6,7 @@ import { authRoutes } from './routes/auth.routes';
 import { requestRoutes } from './routes/request.routes';
 import { settingsRoutes } from './routes/settings.routes';
 import { usersRoutes } from './routes/users.routes';
+import { auditRoutes } from './routes/audit.routes'; // Importar novas rotas de auditoria
 
 const schema = {
   type: 'object',
@@ -78,6 +79,7 @@ async function buildApp() {
   await app.register(requestRoutes, { prefix: '/api/requests' });
   await app.register(settingsRoutes, { prefix: '/api/settings' });
   await app.register(usersRoutes, { prefix: '/api/users' });
+  await app.register(auditRoutes, { prefix: '/api/audit' }); // Registrar rotas de auditoria
 
   return app;
 }

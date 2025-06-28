@@ -71,7 +71,7 @@ export default function LoginPage() {
       if (loggedUser.role === Role.ADMINISTRADOR) {
         router.push('/admin/dashboard');
       } else if (loggedUser.role === Role.ENCARREGADO) {
-        router.push('/requests/new');
+        router.push('/encarregado/dashboard');
       } else {
         router.push('/');
       }
