@@ -1,7 +1,6 @@
 // apps/frontend/src/components/admin/cells/StatusCell.tsx
 'use client';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -11,7 +10,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { cn, getStatusBadgeClasses } from '@/lib/utils'; // Assume que getStatusBadgeClasses está em utils
+import { getStatusBadge } from '@/lib/badgeHelpers';
+import { cn } from '@/lib/utils'; // Assume que getStatusBadgeClasses está em utils
 import { SwapRequest, SwapStatus } from '@repo/shared-types';
 import { UseMutationResult } from '@tanstack/react-query'; // Para tipar a prop mutation
 import { CheckCircle, Loader2 } from 'lucide-react';
@@ -59,11 +59,7 @@ export function StatusCell({
           )}
           disabled={isUpdatingThisRow} // Desabilita o botão
         >
-          <Badge
-            className={cn('cursor-pointer', getStatusBadgeClasses(req.status))}
-          >
-            {req.status}
-          </Badge>
+          {getStatusBadge(req.status)}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
@@ -90,17 +86,8 @@ export function StatusCell({
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               // Bolinha colorida para referência visual
-              <Badge
-                variant="outline"
-                className={cn(
-                  'mr-2 border-none p-0 h-2 w-2',
-                  getStatusBadgeClasses(statusOption)
-                )}
-              >
-                &nbsp;
-              </Badge>
+              getStatusBadge(statusOption)
             )}
-            {statusOption}
             {req.status === statusOption && (
               <CheckCircle className="ml-auto h-4 w-4 opacity-50" />
             )}

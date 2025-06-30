@@ -27,7 +27,17 @@ import {
 } from '@repo/shared-types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { endOfMonth, startOfMonth } from 'date-fns';
-import { AlertCircle, Calendar, FileText, Loader2, LogOut } from 'lucide-react';
+import {
+  AlertCircle,
+  Calendar,
+  FileText,
+  Loader2,
+  LogOut,
+  ScrollText,
+  Settings,
+  Users,
+} from 'lucide-react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { DateRange } from 'react-day-picker';
@@ -382,26 +392,56 @@ export default function AdminDashboardPage() {
   return (
     <ProtectedRoute allowedRoles={[Role.ADMINISTRADOR]}>
       <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 z-50 overflow-auto">
+        {/* TODO COMPONENTIZAR O HEADER PARA USAR EM OUTRAS ROTAS ADMIN */}
         <header className="border-b border-gray-700/30 bg-gray-900/60 backdrop-blur-md sticky top-0 z-50">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-2">
             <div className="flex items-center justify-between">
+              {/* Lado Esquerdo: Logo e Título (sem alteração) */}
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg shadow-yellow-500/20">
-                  <div className="w-6 h-6 bg-gray-900 rounded-full flex items-center justify-center">
-                    <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
-                  </div>
-                </div>
+                <Image alt="logo" src="/logo.png" width={60} height={60} />
                 <h1 className="text-xl font-bold text-white">
                   Troca de Folgas
                 </h1>
               </div>
-              <button
-                onClick={handleLogout}
-                className="text-gray-300 hover:text-white transition-all duration-200 flex items-center space-x-2 hover:bg-gray-700/30 px-3 py-2 rounded-lg"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Sair</span>
-              </button>
+
+              {/* Lado Direito: Botões de Navegação e Ação */}
+              <div className="flex items-center space-x-1 sm:space-x-2">
+                {/* Atalho para Configurações */}
+                <button
+                  onClick={() => router.push('/admin/settings')}
+                  className="flex items-center space-x-2 rounded-lg px-3 py-2 text-gray-300 transition-all duration-200 hover:bg-gray-700/30 hover:text-white cursor-pointer"
+                >
+                  <Settings className="h-4 w-4" />
+                  <span className="hidden sm:inline">Configurações</span>
+                </button>
+
+                {/* Atalho para Usuários */}
+                <button
+                  onClick={() => router.push('/admin/users')}
+                  className="flex items-center space-x-2 rounded-lg px-3 py-2 text-gray-300 transition-all duration-200 hover:bg-gray-700/30 hover:text-white cursor-pointer"
+                >
+                  <Users className="h-4 w-4" />
+                  <span className="hidden sm:inline">Usuários</span>
+                </button>
+
+                {/* Atalho para Log */}
+                <button
+                  onClick={() => router.push('/admin/audit-logs')}
+                  className="flex items-center space-x-2 rounded-lg px-3 py-2 text-gray-300 transition-all duration-200 hover:bg-gray-700/30 hover:text-white cursor-pointer"
+                >
+                  <ScrollText className="h-4 w-4" />
+                  <span className="hidden sm:inline">Log</span>
+                </button>
+
+                {/* Botão de Sair */}
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center space-x-2 rounded-lg px-3 py-2 text-gray-300 transition-all duration-200 hover:bg-gray-700/30 hover:text-white cursor-pointer"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span className="hidden sm:inline">Sair</span>
+                </button>
+              </div>
             </div>
           </div>
         </header>

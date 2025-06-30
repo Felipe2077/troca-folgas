@@ -194,9 +194,14 @@ export function ModernNewRequestModal({
               <Input
                 id="employeeIdOut"
                 type="text"
-                placeholder="Ex: 12345"
+                placeholder="Ex: 001234 (6 dígitos)"
                 value={employeeIdOut}
                 onChange={(e) => setEmployeeIdOut(e.target.value)}
+                onBlur={(e) => {
+                  const value = e.target.value.padStart(6, '0');
+                  setEmployeeIdOut(value);
+                }}
+                maxLength={6}
                 disabled={isDisabled}
                 className={cn(
                   'bg-gray-700/50 border-gray-600/50 text-white placeholder-gray-400 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20',
@@ -218,9 +223,14 @@ export function ModernNewRequestModal({
               <Input
                 id="employeeIdIn"
                 type="text"
-                placeholder="Ex: 54321"
+                placeholder="Ex: 005432 (6 dígitos)"
                 value={employeeIdIn}
                 onChange={(e) => setEmployeeIdIn(e.target.value)}
+                onBlur={(e) => {
+                  const value = e.target.value.padStart(6, '0');
+                  setEmployeeIdIn(value);
+                }}
+                maxLength={6}
                 disabled={isDisabled}
                 className={cn(
                   'bg-gray-700/50 border-gray-600/50 text-white placeholder-gray-400 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20',

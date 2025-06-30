@@ -104,13 +104,13 @@ export const swapRequestCreateBodySchema = z
     employeeIdOut: z
       .string({ required_error: 'Crachá de Saída obrigatório.' })
       .trim()
-      .min(1, 'Crachá de Saída obrigatório.')
-      .regex(/^[0-9]+$/, 'Crachá de Saída deve conter apenas números.'),
+      .length(6, 'Crachá de Saída deve ter 6 dígitos.')
+      .regex(/^[0-9]{6}$/, 'Crachá de Saída deve conter apenas números.'),
     employeeIdIn: z
       .string({ required_error: 'Crachá de Entrada obrigatório.' })
       .trim()
-      .min(1, 'Crachá de Entrada obrigatório.')
-      .regex(/^[0-9]+$/, 'Crachá de Entrada deve conter apenas números.'),
+      .length(6, 'Crachá de Entrada deve ter 6 dígitos.')
+      .regex(/^[0-9]{6}$/, 'Crachá de Entrada deve conter apenas números.'),
     swapDate: z.coerce.date({
       required_error: 'Data da Troca é obrigatória.',
       invalid_type_error: 'Data da Troca inválida (deve ser objeto Date).',

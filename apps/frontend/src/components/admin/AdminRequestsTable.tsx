@@ -1,7 +1,7 @@
 // apps/frontend/src/components/admin/RequestsTable.tsx
 'use client';
 
-import { Badge } from '@/components/ui/badge';
+import { getStatusBadge, getTypeBadge } from '@/lib/badgeHelpers';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -229,20 +229,7 @@ export function RequestsTable({
             <TableCell className="text-center">{req.groupOut}</TableCell>
             <TableCell className="text-center">{req.groupIn}</TableCell>
             <TableCell className="text-center">
-              <Badge
-                variant={
-                  req.eventType === SwapEventType.TROCA
-                    ? 'secondary'
-                    : 'default'
-                }
-                className={
-                  req.eventType === SwapEventType.TROCA
-                    ? 'bg-cyan-600'
-                    : 'bg-teal-600/50'
-                }
-              >
-                {req.eventType}
-              </Badge>
+              {getTypeBadge(req.eventType)}
             </TableCell>
             {/* Célula de Status usa o componente StatusCell */}
             <TableCell className="text-center">
