@@ -72,6 +72,8 @@ export async function requestRoutes(fastify: FastifyInstance) {
         groupOut,
         groupIn,
         eventType,
+        page = 1,
+        limit = 10,
       } = queryParse.data;
 
       // 3. Construir Cláusula Where Dinamicamente
@@ -131,14 +133,23 @@ export async function requestRoutes(fastify: FastifyInstance) {
       const orderByClause = { [sortBy || 'createdAt']: sortOrder || 'desc' };
 
       // 5. Buscar Solicitações no Banco com Filtros e Ordenação
-      const requests = await prisma.swapRequest.findMany({
-        where: whereClause, // <-- Where dinâmico
-        orderBy: orderByClause,
-        include: { submittedBy: { select: { name: true, loginIdentifier: true, role: true } } } // Incluir dados do usuário que submeteu
-      });
+      const [requests, totalCount] = await Promise.all([
+        prisma.swapRequest.findMany({
+          where: whereClause, // <-- Where dinâmico
+          orderBy: orderByClause,
+          skip: (page - 1) * limit,
+          take: limit,
+          include: { submittedBy: { select: { name: true, loginIdentifier: true, role: true } } } // Incluir dados do usuário que submeteu
+        }),
+        prisma.swapRequest.count({ where: whereClause })
+      ]);
 
       // 6. Retornar a lista filtrada e ordenada
-      return reply.status(200).send({ requests });
+      return reply.status(200).send({ 
+        requests,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+      });
     } catch (error) {
       // Tratamento de erro (mantido)
       if (error instanceof ZodError) {

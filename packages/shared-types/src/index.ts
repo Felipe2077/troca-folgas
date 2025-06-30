@@ -326,6 +326,10 @@ export const requestListQuerySchema = z
     // Ordenação mantida
     sortBy: sortableColumns.optional(),
     sortOrder: sortOrderValues.optional(),
+
+    // Paginação
+    page: z.coerce.number().int().positive().optional().default(1),
+    limit: z.coerce.number().int().positive().optional().default(10),
   })
   // Adiciona refine para garantir que data final >= data inicial para cada par
   .refine(

@@ -1,6 +1,7 @@
 'use client';
 
 // ... (imports)
+import { Pagination } from '@/components/ui/Pagination';
 import { RequestsTable } from '@/components/admin/AdminRequestsTable';
 import { DashboardFilters } from '@/components/admin/DashboardFilters';
 import { ObservationDialog } from '@/components/admin/ObservationDialog';
@@ -132,6 +133,7 @@ export default function AdminDashboardPage() {
   const [selectedRequest, setSelectedRequest] = useState<SwapRequest | null>(
     null
   );
+  const [currentPage, setCurrentPage] = useState(1);
 
   // ... (useEffect de proteção de rota)
   useEffect(() => {
@@ -162,11 +164,11 @@ export default function AdminDashboardPage() {
 
   // Query para a tabela de solicitações
   const {
-    data: requests,
+    data,
     isLoading: isQueryLoading,
     isError,
     error,
-  } = useQuery<{ requests: SwapRequest[] }, Error>({
+  } = useQuery<{ requests: SwapRequest[], totalCount: number, totalPages: number }, Error>({
     queryKey: [
       'adminRequests',
       selectedVigencia,
@@ -181,6 +183,7 @@ export default function AdminDashboardPage() {
       eventTypeFilter,
       sortColumn,
       sortDirection,
+      currentPage,
     ],
     queryFn: async () => {
       const queryParams = new URLSearchParams();
@@ -239,6 +242,7 @@ export default function AdminDashboardPage() {
 
       queryParams.append('sortBy', sortColumn);
       queryParams.append('sortOrder', sortDirection);
+      queryParams.append('page', currentPage.toString());
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/requests?${queryParams.toString()}`,
@@ -295,7 +299,7 @@ export default function AdminDashboardPage() {
   const mergedSummaryData = useMemo(() => {
     if (!summaryData) return undefined;
     const solicitedCountFromTable =
-      requests?.requests?.filter((req) => req.status === SwapStatus.SOLICITADO)
+      data?.requests?.filter((req) => req.status === SwapStatus.SOLICITADO)
         .length || 0;
     return {
       ...summaryData,
@@ -305,7 +309,7 @@ export default function AdminDashboardPage() {
           solicitedCountFromTable + (summaryData.byStatus.SOLICITADO || 0),
       },
     };
-  }, [summaryData, requests]);
+  }, [summaryData, data]);
 
   const handleLogout = () => {
     logout();
@@ -551,7 +555,7 @@ export default function AdminDashboardPage() {
                   </p>
                   <p className="text-gray-500 text-sm">{error?.message}</p>
                 </div>
-              ) : !requests?.requests || requests.requests.length === 0 ? (
+              ) : !data?.requests || data.requests.length === 0 ? (
                 <div className="text-center py-12">
                   <FileText className="h-8 w-8 text-gray-500 mx-auto mb-4" />
                   <p className="text-gray-400 mb-2">
@@ -563,15 +567,22 @@ export default function AdminDashboardPage() {
                   </p>
                 </div>
               ) : (
-                <RequestsTable
-                  requests={requests.requests}
-                  sortColumn={sortColumn}
-                  sortDirection={sortDirection}
-                  updateRequestMutation={updateRequestMutation}
-                  handleSort={handleSort}
-                  handleStatusUpdate={handleStatusUpdate}
-                  handleEditObservation={handleEditObservation}
-                />
+                <>
+                  <RequestsTable
+                    requests={data.requests}
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    updateRequestMutation={updateRequestMutation}
+                    handleSort={handleSort}
+                    handleStatusUpdate={handleStatusUpdate}
+                    handleEditObservation={handleEditObservation}
+                  />
+                  <Pagination 
+                    currentPage={currentPage}
+                    totalPages={data.totalPages}
+                    onPageChange={setCurrentPage}
+                  />
+                </>
               )}
             </div>
           </div>

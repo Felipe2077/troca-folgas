@@ -212,7 +212,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/home/felipe/coding/troca-folgas/apps/backend/src/generated/prisma",
+      "value": "/Users/felipe/coding/sistema-trocas/apps/backend/src/generated/prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -221,7 +221,7 @@ const config = {
     "binaryTargets": [
       {
         "fromEnvVar": null,
-        "value": "debian-openssl-3.0.x",
+        "value": "darwin",
         "native": true
       },
       {
@@ -234,7 +234,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/home/felipe/coding/troca-folgas/apps/backend/prisma/schema.prisma",
+    "sourceFilePath": "/Users/felipe/coding/sistema-trocas/apps/backend/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {

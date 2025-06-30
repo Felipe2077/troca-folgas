@@ -17,7 +17,7 @@ const schema = {
     },
     PORT: {
       type: 'string',
-      default: '3000',
+      default: '3333',
     },
     NODE_ENV: {
       type: 'string',
@@ -87,7 +87,7 @@ async function buildApp() {
 // Start server
 async function start() {
   const app = await buildApp();
-  const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+  const port = process.env.PORT ? parseInt(process.env.PORT) : 3333;
   const host = '0.0.0.0';
 
   try {
